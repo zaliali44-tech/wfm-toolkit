@@ -1,81 +1,84 @@
 <!DOCTYPE html>
 <html>
-
 <head>
 
-<title>WFM Analytics Toolkit</title>
-
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
 <style>
 
 body{
 font-family:Arial;
-background:#f4f7fb;
-margin:40px;
+background:#f5f7fb;
+padding:20px;
 }
 
-h1{
-text-align:center;
+.container{
+max-width:1200px;
+margin:auto;
 }
 
-.section{
+.card{
 background:white;
 padding:20px;
-margin-bottom:25px;
+margin-bottom:20px;
 border-radius:10px;
-box-shadow:0 3px 10px rgba(0,0,0,0.08);
+box-shadow:0 2px 6px rgba(0,0,0,0.08);
 }
 
-.dashboard{
-display:grid;
-grid-template-columns:1fr 1fr;
-gap:20px;
+h2{
+margin-top:0;
 }
 
 input{
-padding:6px;
+padding:8px;
 margin:5px;
 }
 
 button{
-padding:8px 14px;
-background:#2c7be5;
+padding:10px 16px;
+background:#2b6cff;
 color:white;
 border:none;
-border-radius:5px;
+border-radius:6px;
 cursor:pointer;
 }
 
-table{
-width:100%;
-border-collapse:collapse;
-margin-top:15px;
-}
-
-th,td{
-border:1px solid #ddd;
-padding:8px;
-text-align:center;
-}
-
-th{
-background:#eef2f7;
+button:hover{
+background:#1d4fe0;
 }
 
 #dropZone{
-border:2px dashed #2c7be5;
+border:2px dashed #999;
 padding:30px;
 text-align:center;
-margin-top:15px;
 border-radius:10px;
-background:#f0f6ff;
+background:#fafafa;
+cursor:pointer;
+}
+
+#dropZone.drag{
+background:#eef3ff;
+border-color:#2b6cff;
 }
 
 canvas{
-margin-top:30px;
+max-width:650px;
+margin:20px auto;
+display:block;
+}
+
+#insightBox{
+background:#eef6ff;
+padding:15px;
+border-radius:8px;
+margin-top:10px;
+}
+
+.chatbox{
+background:#fafafa;
+padding:15px;
+border-radius:8px;
 }
 
 </style>
@@ -84,360 +87,396 @@ margin-top:30px;
 
 <body>
 
-<h1>WFM Analytics Toolkit</h1>
+<div class="container">
 
-<div class="section">
+<div class="card">
 
-<h2>Upload Data</h2>
+<h2>Upload WFM File</h2>
 
-<p>Upload Excel (.xlsx) or CSV file or enter manually.</p>
+<div id="dropZone">Drag & Drop Excel or Click</div>
 
-<a href="wfm_template.csv" download>
-<button>Download Sample Template</button>
-</a>
+<input type="file" id="fileInput" accept=".xlsx,.xls" style="display:none">
 
 <br><br>
-
-<input type="file" id="fileInput">
-
-<br><br>
-
-Calls <input id="calls">
-Actual <input id="actual">
-AHT(sec) <input id="aht">
-Agents <input id="agents">
 
 <button onclick="runAnalysis()">Run Analysis</button>
 
-<div id="dropZone">Drag & Drop Excel or CSV File</div>
+<a href="wfm_toolkit_sample_template.xlsx" download>
+<button>Download Sample Template</button>
+</a>
 
 </div>
 
 
-<div class="section">
+<div class="card">
 
-<h2>Interval Results</h2>
+<h2>Forecast Accuracy</h2>
 
-<table id="results">
+Forecast <input id="fc">
+Actual <input id="ac">
 
-<thead>
+<button onclick="forecastAcc()">Calculate</button>
 
-<tr>
-
-<th>Interval</th>
-<th>Forecast</th>
-<th>Actual</th>
-<th>AHT</th>
-<th>Agents</th>
-<th>Workload(H)</th>
-<th>Required FTE</th>
-<th>Occupancy</th>
-<th>Forecast Accuracy</th>
-
-</tr>
-
-</thead>
-
-<tbody></tbody>
-
-</table>
-
-<canvas id="forecastChart"></canvas>
-<canvas id="occupancyChart"></canvas>
-<canvas id="intradayChart"></canvas>
+<p id="faResult"></p>
 
 </div>
 
 
-<div class="section">
+<div class="card">
 
-<h2>Erlang Simulation</h2>
+<h2>Shrinkage Calculator</h2>
 
-Calls <input id="ecalls">
-AHT <input id="eaht">
-Agents <input id="eagents">
+Scheduled HC <input id="sch">
+Planned Leave <input id="pl">
+Unplanned Leave <input id="upl">
 
-<button onclick="simulateErlang()">Run Simulation</button>
+<button onclick="calcShrink()">Calculate</button>
+
+<p id="shrinkResult"></p>
+
+</div>
+
+
+<div class="card">
+
+<h2>Capacity Planning</h2>
+
+Forecast Volume <input id="vol">
+AHT(sec) <input id="aht">
+Available Agents <input id="avail">
+
+<button onclick="capacity()">Calculate</button>
+
+<p id="capResult"></p>
+
+</div>
+
+
+<div class="card">
+
+<h2>Erlang Staffing</h2>
+
+Calls <input id="calls">
+AHT(sec) <input id="aht2">
+
+<button onclick="erlang()">Calculate</button>
 
 <p id="erlangResult"></p>
 
-<canvas id="slCurve"></canvas>
+</div>
+
+
+<div class="card">
+
+<h2>Service Level Prediction</h2>
+
+Agents <input id="agents">
+
+<button onclick="predictSL()">Predict</button>
+
+<p id="slResult"></p>
 
 </div>
 
 
-<div class="section">
+<div class="card">
 
-<h2>Occupancy Heatmap</h2>
+<h2>Intraday Reforecast</h2>
 
-<canvas id="heatmap"></canvas>
+Forecast <input id="rf">
+Actual <input id="ra">
+
+<button onclick="reforecast()">Calculate</button>
+
+<p id="rfResult"></p>
+
+</div>
+
+
+<div class="card">
+
+<h2>WFM Analytics</h2>
+
+<canvas id="intradayChart"></canvas>
+<canvas id="staffCurve"></canvas>
+<canvas id="erlangSim"></canvas>
+
+<div id="insightBox"></div>
+
+</div>
+
+
+<div class="card">
+
+<h2>WFM AI Assistant</h2>
+
+<div class="chatbox">
+
+Ask something like:
+
+"250 calls, AHT 420, SL 80"
+
+<br><br>
+
+<input id="chatInput" style="width:70%">
+<button onclick="wfmAssistant()">Ask</button>
+
+<p id="chatResponse"></p>
+
+</div>
+
+</div>
 
 </div>
 
 
 <script>
 
-let forecastChart
-let occChart
-let intradayChart
-let slCurve
-let heatmap
+let uploadedData=[];
 
+const dropZone=document.getElementById("dropZone");
+const fileInput=document.getElementById("fileInput");
 
-function runAnalysis(){
+dropZone.onclick=()=>fileInput.click();
 
-let calls=document.getElementById("calls").value.split(",").map(Number)
-let actual=document.getElementById("actual").value.split(",").map(Number)
-let aht=document.getElementById("aht").value.split(",").map(Number)
-let agents=document.getElementById("agents").value.split(",").map(Number)
+dropZone.addEventListener("dragover",e=>{
+e.preventDefault();
+dropZone.classList.add("drag");
+});
 
-let tbody=document.querySelector("#results tbody")
-tbody.innerHTML=""
+dropZone.addEventListener("dragleave",()=>{
+dropZone.classList.remove("drag");
+});
 
-let occ=[]
-let fc=[]
-let ac=[]
+dropZone.addEventListener("drop",e=>{
+e.preventDefault();
+dropZone.classList.remove("drag");
 
-for(let i=0;i<calls.length;i++){
+const file=e.dataTransfer.files[0];
+handleFile(file);
+});
 
-let workload=(calls[i]*aht[i])/3600
-let fte=workload/0.85
-let occupancy=(workload/agents[i])*100
-let accuracy=100-(Math.abs(actual[i]-calls[i])/calls[i]*100)
-
-occ.push(occupancy)
-fc.push(calls[i])
-ac.push(actual[i])
-
-let row=`
-
-<tr>
-
-<td>${i+1}</td>
-<td>${calls[i]}</td>
-<td>${actual[i]}</td>
-<td>${aht[i]}</td>
-<td>${agents[i]}</td>
-<td>${workload.toFixed(2)}</td>
-<td>${fte.toFixed(2)}</td>
-<td>${occupancy.toFixed(1)}%</td>
-<td>${accuracy.toFixed(1)}%</td>
-
-</tr>
-`
-
-tbody.innerHTML+=row
-
-}
-
-drawCharts(fc,ac,occ)
-
-}
-
-
-function drawCharts(fc,ac,occ){
-
-if(forecastChart) forecastChart.destroy()
-if(occChart) occChart.destroy()
-if(intradayChart) intradayChart.destroy()
-
-forecastChart=new Chart(document.getElementById("forecastChart"),{
-
-type:"bar",
-data:{
-labels:fc.map((_,i)=>"Int "+(i+1)),
-datasets:[
-{label:"Forecast",data:fc},
-{label:"Actual",data:ac}
-]
-}
-
-})
-
-occChart=new Chart(document.getElementById("occupancyChart"),{
-
-type:"line",
-data:{
-labels:occ.map((_,i)=>"Int "+(i+1)),
-datasets:[
-{label:"Occupancy %",data:occ}
-]
-}
-
-})
-
-intradayChart=new Chart(document.getElementById("intradayChart"),{
-
-type:"line",
-data:{
-labels:fc.map((_,i)=>"Interval "+(i+1)),
-datasets:[
-{label:"Calls Trend",data:fc}
-]
-}
-
-})
-
-createHeatmap(occ)
-
-}
-
-
-function simulateErlang(){
-
-let calls=Number(document.getElementById("ecalls").value)
-let aht=Number(document.getElementById("eaht").value)
-let agents=Number(document.getElementById("eagents").value)
-
-let workload=(calls*aht)/3600
-let occ=(workload/agents)
-
-let sl=Math.max(0,100-(occ*100))
-
-document.getElementById("erlangResult").innerText="Estimated Service Level: "+sl.toFixed(1)+"%"
-
-drawSLCurve(calls,aht)
-
-}
-
-
-function drawSLCurve(calls,aht){
-
-let staffing=[]
-let sl=[]
-
-for(let i=5;i<60;i++){
-
-let workload=(calls*aht)/3600
-let occ=workload/i
-let service=Math.max(0,100-(occ*100))
-
-staffing.push(i)
-sl.push(service)
-
-}
-
-if(slCurve) slCurve.destroy()
-
-slCurve=new Chart(document.getElementById("slCurve"),{
-
-type:"line",
-data:{
-labels:staffing,
-datasets:[
-{label:"Service Level %",data:sl}
-]
-}
-
-})
-
-}
-
-
-function createHeatmap(data){
-
-if(heatmap) heatmap.destroy()
-
-heatmap=new Chart(document.getElementById("heatmap"),{
-
-type:"bar",
-data:{
-labels:data.map((_,i)=>"Int "+(i+1)),
-datasets:[
-{label:"Occupancy Heat",data:data}
-]
-}
-
-})
-
-}
-
+fileInput.addEventListener("change",e=>{
+handleFile(e.target.files[0]);
+});
 
 
 function handleFile(file){
 
-let name=file.name
+const reader=new FileReader();
 
-if(name.endsWith(".csv")){
+reader.onload=(e)=>{
 
-Papa.parse(file,{
-header:true,
-complete:function(res){
-populate(res.data)
-}
-})
+const data=new Uint8Array(e.target.result);
 
-}
+const wb=XLSX.read(data,{type:'array'});
 
-else{
+const sheet=wb.Sheets[wb.SheetNames[0]];
 
-let reader=new FileReader()
+uploadedData=XLSX.utils.sheet_to_json(sheet);
 
-reader.onload=function(e){
+};
 
-let data=new Uint8Array(e.target.result)
-let workbook=XLSX.read(data,{type:"array"})
-let sheet=workbook.Sheets[workbook.SheetNames[0]]
-let json=XLSX.utils.sheet_to_json(sheet)
-
-populate(json)
-
-}
-
-reader.readAsArrayBuffer(file)
-
-}
+reader.readAsArrayBuffer(file);
 
 }
 
 
+function runAnalysis(){
 
-function populate(rows){
+if(uploadedData.length==0){
+alert("Upload file first");
+return;
+}
 
-let calls=[]
-let actual=[]
-let aht=[]
-let agents=[]
+let interval=[];
+let forecast=[];
+let actual=[];
+let agents=[];
 
-rows.forEach(r=>{
+uploadedData.forEach(r=>{
+interval.push(r.Interval);
+forecast.push(r.Forecast);
+actual.push(r.Actual);
+agents.push(r.Agents);
+});
 
-calls.push(Number(r.Forecast))
-actual.push(Number(r.Actual))
-aht.push(Number(r.AHT))
-agents.push(Number(r.Agents))
 
-})
+new Chart(intradayChart,{
+type:'line',
+data:{
+labels:interval,
+datasets:[
+{label:'Forecast',data:forecast},
+{label:'Actual',data:actual}
+]
+}
+});
 
-document.getElementById("calls").value=calls.join(",")
-document.getElementById("actual").value=actual.join(",")
-document.getElementById("aht").value=aht.join(",")
-document.getElementById("agents").value=agents.join(",")
 
-alert("File uploaded. Click Run Analysis.")
+new Chart(staffCurve,{
+type:'line',
+data:{
+labels:agents,
+datasets:[
+{
+label:'SL vs Staffing',
+data:agents.map(a=>Math.min(100,a*5))
+}
+]
+}
+});
+
+
+new Chart(erlangSim,{
+type:'bar',
+data:{
+labels:interval,
+datasets:[
+{
+label:'Agents',
+data:agents
+}
+]
+}
+});
+
+
+generateInsights(forecast,actual,agents);
 
 }
 
 
-document.getElementById("fileInput").addEventListener("change",function(e){
+function generateInsights(f,a,ag){
 
-handleFile(e.target.files[0])
+let msg="";
 
-})
+let acc=0;
+
+for(let i=0;i<f.length;i++){
+acc+=1-Math.abs(f[i]-a[i])/f[i];
+}
+
+acc=(acc/f.length)*100;
+
+msg+="Forecast Accuracy: "+acc.toFixed(1)+"%<br>";
+
+if(acc<90){
+msg+="RCA: Forecast variance detected.<br>";
+msg+="Action: Recalibrate historical weighting.<br><br>";
+}
+
+let max=Math.max(...ag);
+let min=Math.min(...ag);
+
+if(max>min*1.4){
+msg+="RCA: High intraday staffing variation.<br>";
+msg+="Action: Implement intraday reforecast.<br>";
+}
+
+document.getElementById("insightBox").innerHTML=msg;
+
+}
 
 
-let drop=document.getElementById("dropZone")
+function forecastAcc(){
 
-drop.addEventListener("dragover",(e)=>{
-e.preventDefault()
-})
+let f=fc.value;
+let a=ac.value;
 
-drop.addEventListener("drop",(e)=>{
+let res=(1-Math.abs(f-a)/f)*100;
 
-e.preventDefault()
+faResult.innerText="Accuracy: "+res.toFixed(2)+"%";
 
-handleFile(e.dataTransfer.files[0])
+}
 
-})
+
+function calcShrink(){
+
+let s=sch.value;
+let plv=pl.value;
+let up=upl.value;
+
+let shr=((plv/s)+(up/s))*100;
+
+shrinkResult.innerText="Shrinkage: "+shr.toFixed(2)+"%";
+
+}
+
+
+function capacity(){
+
+let v=vol.value;
+let a=aht.value;
+let ag=avail.value;
+
+let workload=(v*a)/3600;
+
+capResult.innerText="Workload Hours: "+workload.toFixed(2);
+
+}
+
+
+function erlang(){
+
+let c=calls.value;
+let a=aht2.value;
+
+let load=(c*a)/3600;
+
+let agents=Math.ceil(load*1.25);
+
+erlangResult.innerText="Agents Required: "+agents;
+
+}
+
+
+function predictSL(){
+
+let a=agents.value;
+
+let sl=Math.min(100,a*5);
+
+slResult.innerText="Estimated SL: "+sl+"%";
+
+}
+
+
+function reforecast(){
+
+let f=rf.value;
+let a=ra.value;
+
+let rfVal=(a/f)*100;
+
+rfResult.innerText="Reforecast Index: "+rfVal.toFixed(1)+"%";
+
+}
+
+
+function wfmAssistant(){
+
+let text=chatInput.value;
+
+let calls=text.match(/\d+/g);
+
+if(!calls){
+chatResponse.innerText="Please include calls and AHT.";
+return;
+}
+
+let callVol=parseInt(calls[0]);
+let aht=parseInt(calls[1]);
+
+let workload=(callVol*aht)/3600;
+
+let agents=Math.ceil(workload*1.3);
+
+chatResponse.innerText=
+"Estimated Agents Needed: "+agents+
+". Workload: "+workload.toFixed(2)+" hours.";
+
+}
 
 </script>
 
