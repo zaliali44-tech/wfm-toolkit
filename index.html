@@ -2,444 +2,964 @@
 <html>
 
 <head>
+  <title>WFM Analytics Toolkit</title>
 
-<title>WFM Analytics Toolkit</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f7fb;
+      margin: 40px;
+      color: #111827;
+    }
 
-<style>
+    h1 {
+      text-align: center;
+      margin-bottom: 10px;
+    }
 
-body{
-font-family:Arial;
-background:#f4f7fb;
-margin:40px;
-}
+    h2, h3 {
+      margin-top: 0;
+    }
 
-h1{
-text-align:center;
-}
+    .section {
+      background: white;
+      padding: 20px;
+      margin-bottom: 25px;
+      border-radius: 10px;
+      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+    }
 
-.section{
-background:white;
-padding:20px;
-margin-bottom:25px;
-border-radius:10px;
-box-shadow:0 3px 10px rgba(0,0,0,0.08);
-}
+    .dashboard {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
 
-.dashboard{
-display:grid;
-grid-template-columns:1fr 1fr;
-gap:20px;
-}
+    .calc-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-top: 20px;
+    }
 
-input{
-padding:6px;
-margin:5px;
-}
+    input, textarea {
+      padding: 8px;
+      margin: 5px;
+      border: 1px solid #cbd5e1;
+      border-radius: 4px;
+      font-size: 14px;
+    }
 
-button{
-padding:8px 14px;
-background:#2c7be5;
-color:white;
-border:none;
-border-radius:5px;
-cursor:pointer;
-}
+    textarea {
+      width: calc(100% - 20px);
+      min-height: 80px;
+      resize: vertical;
+    }
 
-table{
-width:100%;
-border-collapse:collapse;
-margin-top:15px;
-}
+    button {
+      padding: 8px 14px;
+      background: #2c7be5;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 14px;
+    }
 
-th,td{
-border:1px solid #ddd;
-padding:8px;
-text-align:center;
-}
+    button:hover {
+      background: #1f6ad0;
+    }
 
-th{
-background:#eef2f7;
-}
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+      font-size: 14px;
+    }
 
-#dropZone{
-border:2px dashed #2c7be5;
-padding:30px;
-text-align:center;
-margin-top:15px;
-border-radius:10px;
-background:#f0f6ff;
-}
+    th, td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: center;
+    }
 
-canvas{
-margin-top:30px;
-}
+    th {
+      background: #eef2f7;
+    }
 
-</style>
+    #dropZone {
+      border: 2px dashed #2c7be5;
+      padding: 30px;
+      text-align: center;
+      margin-top: 15px;
+      border-radius: 10px;
+      background: #f0f6ff;
+      transition: 0.2s ease;
+    }
 
+    #dropZone.dragover {
+      background: #dbe9ff;
+      border-color: #1f6ad0;
+    }
+
+    .chart-box {
+      position: relative;
+      height: 280px;
+      margin-top: 20px;
+    }
+
+    .small-chart-box {
+      position: relative;
+      height: 260px;
+      margin-top: 20px;
+    }
+
+    .helper {
+      background: #eef6ff;
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 10px;
+      line-height: 1.5;
+    }
+
+    .result-box {
+      margin-top: 12px;
+      padding: 12px;
+      border-radius: 8px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      min-height: 24px;
+    }
+
+    .insight-box {
+      margin-top: 20px;
+      padding: 15px;
+      border-radius: 8px;
+      background: #eef6ff;
+      line-height: 1.6;
+    }
+
+    .muted {
+      color: #475569;
+      font-size: 13px;
+    }
+
+    @media (max-width: 900px) {
+      .dashboard,
+      .calc-grid {
+        grid-template-columns: 1fr;
+      }
+
+      input {
+        width: calc(100% - 20px);
+        display: block;
+      }
+    }
+  </style>
 </head>
 
 <body>
 
-<h1>WFM Analytics Toolkit</h1>
+  <h1>WFM Analytics Toolkit</h1>
+
+  <div class="section">
+    <h2>AI WFM Assistant</h2>
+    <div class="helper">
+      Ask in simple format, for example:<br>
+      <strong>250 calls, AHT 420, shrinkage 30</strong><br>
+      <strong>forecast 500, actual 450</strong><br>
+      <strong>calls 300, AHT 360, agents 18</strong>
+    </div>
+
+    <textarea id="aiPrompt" placeholder="Type your WFM question here..."></textarea>
+    <br>
+    <button onclick="runAIAssistant()">Ask Assistant</button>
+
+    <div id="aiResponse" class="result-box"></div>
+  </div>
+
+  <div class="section">
+    <h2>Upload Data</h2>
 
-<div class="section">
+    <p>Upload Excel (.xlsx) or CSV file, or enter interval data manually.</p>
 
-<h2>Upload Data</h2>
+    <a href="wfm_template.csv" download>
+      <button type="button">Download Sample Template</button>
+    </a>
 
-<p>Upload Excel (.xlsx) or CSV file or enter manually.</p>
+    <br><br>
 
-<a href="wfm_template.csv" download>
-<button>Download Sample Template</button>
-</a>
+    <input type="file" id="fileInput" accept=".csv,.xlsx,.xls">
 
-<br><br>
+    <br><br>
 
-<input type="file" id="fileInput">
+    Calls <input id="calls" placeholder="120,140,150">
+    Actual <input id="actual" placeholder="110,145,155">
+    AHT(sec) <input id="aht" placeholder="420,430,410">
+    Agents <input id="agents" placeholder="20,22,23">
 
-<br><br>
+    <button onclick="runAnalysis()">Run Analysis</button>
 
-Calls <input id="calls">
-Actual <input id="actual">
-AHT(sec) <input id="aht">
-Agents <input id="agents">
+    <div id="dropZone">Drag & Drop Excel or CSV File</div>
+  </div>
 
-<button onclick="runAnalysis()">Run Analysis</button>
+  <div class="section">
+    <h2>Interval Results</h2>
 
-<div id="dropZone">Drag & Drop Excel or CSV File</div>
+    <table id="results">
+      <thead>
+        <tr>
+          <th>Interval</th>
+          <th>Forecast</th>
+          <th>Actual</th>
+          <th>AHT</th>
+          <th>Agents</th>
+          <th>Workload(H)</th>
+          <th>Required FTE</th>
+          <th>Occupancy</th>
+          <th>Forecast Accuracy</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
 
-</div>
+    <div class="chart-box">
+      <canvas id="forecastChart"></canvas>
+    </div>
 
+    <div class="chart-box">
+      <canvas id="occupancyChart"></canvas>
+    </div>
 
-<div class="section">
+    <div class="chart-box">
+      <canvas id="intradayChart"></canvas>
+    </div>
+  </div>
 
-<h2>Interval Results</h2>
+  <div class="section">
+    <h2>RCA + Action Plan</h2>
+    <div id="rcaBox" class="insight-box">
+      Upload data and run analysis to see RCA and action plan.
+    </div>
+  </div>
 
-<table id="results">
+  <div class="section">
+    <h2>WFM Calculators</h2>
 
-<thead>
+    <div class="calc-grid">
+      <div class="section" style="margin-bottom:0;">
+        <h2>Shrinkage Calculator</h2>
 
-<tr>
+        Scheduled HC <input id="sch">
+        Planned Leave <input id="pl">
+        Unplanned Leave <input id="upl">
+        Week Off <input id="woff">
 
-<th>Interval</th>
-<th>Forecast</th>
-<th>Actual</th>
-<th>AHT</th>
-<th>Agents</th>
-<th>Workload(H)</th>
-<th>Required FTE</th>
-<th>Occupancy</th>
-<th>Forecast Accuracy</th>
+        <button onclick="calcShrinkage()">Calculate</button>
 
-</tr>
+        <div id="shrinkResult" class="result-box"></div>
+      </div>
 
-</thead>
+      <div class="section" style="margin-bottom:0;">
+        <h2>Capacity Planning</h2>
 
-<tbody></tbody>
+        Forecast Calls <input id="ccalls">
+        AHT(sec) <input id="caht">
+        Shrinkage % <input id="cshrink">
 
-</table>
+        <button onclick="capacityCalc()">Calculate</button>
 
-<canvas id="forecastChart"></canvas>
-<canvas id="occupancyChart"></canvas>
-<canvas id="intradayChart"></canvas>
+        <div id="capacityResult" class="result-box"></div>
+      </div>
 
-</div>
+      <div class="section" style="margin-bottom:0;">
+        <h2>Erlang C Staffing</h2>
 
+        Calls <input id="ecalls">
+        AHT(sec) <input id="eaht">
+        Target SL % <input id="esl" placeholder="80">
 
-<div class="section">
+        <button onclick="erlangStaffingCalc()">Calculate</button>
 
-<h2>Erlang Simulation</h2>
+        <div id="erlangStaffingResult" class="result-box"></div>
+      </div>
 
-Calls <input id="ecalls">
-AHT <input id="eaht">
-Agents <input id="eagents">
+      <div class="section" style="margin-bottom:0;">
+        <h2>Service Level Predictor</h2>
 
-<button onclick="simulateErlang()">Run Simulation</button>
+        Calls <input id="slcalls">
+        AHT <input id="slaht">
+        Agents <input id="slagents">
 
-<p id="erlangResult"></p>
+        <button onclick="predictSL()">Predict</button>
 
-<canvas id="slCurve"></canvas>
+        <div id="slResult" class="result-box"></div>
+      </div>
 
-</div>
+      <div class="section" style="margin-bottom:0;">
+        <h2>Intraday Reforecast</h2>
 
+        Forecast <input id="rf">
+        Actual <input id="ra">
+        Remaining Forecast <input id="rr">
 
-<div class="section">
+        <button onclick="reforecast()">Update</button>
 
-<h2>Occupancy Heatmap</h2>
+        <div id="rfResult" class="result-box"></div>
+      </div>
 
-<canvas id="heatmap"></canvas>
+      <div class="section" style="margin-bottom:0;">
+        <h2>Forecast Accuracy</h2>
 
-</div>
+        Forecast <input id="facForecast">
+        Actual <input id="facActual">
+
+        <button onclick="forecastAccuracyCalc()">Calculate</button>
 
-
-<script>
-
-let forecastChart
-let occChart
-let intradayChart
-let slCurve
-let heatmap
-
-
-function runAnalysis(){
-
-let calls=document.getElementById("calls").value.split(",").map(Number)
-let actual=document.getElementById("actual").value.split(",").map(Number)
-let aht=document.getElementById("aht").value.split(",").map(Number)
-let agents=document.getElementById("agents").value.split(",").map(Number)
-
-let tbody=document.querySelector("#results tbody")
-tbody.innerHTML=""
-
-let occ=[]
-let fc=[]
-let ac=[]
-
-for(let i=0;i<calls.length;i++){
-
-let workload=(calls[i]*aht[i])/3600
-let fte=workload/0.85
-let occupancy=(workload/agents[i])*100
-let accuracy=100-(Math.abs(actual[i]-calls[i])/calls[i]*100)
-
-occ.push(occupancy)
-fc.push(calls[i])
-ac.push(actual[i])
-
-let row=`
-
-<tr>
-
-<td>${i+1}</td>
-<td>${calls[i]}</td>
-<td>${actual[i]}</td>
-<td>${aht[i]}</td>
-<td>${agents[i]}</td>
-<td>${workload.toFixed(2)}</td>
-<td>${fte.toFixed(2)}</td>
-<td>${occupancy.toFixed(1)}%</td>
-<td>${accuracy.toFixed(1)}%</td>
-
-</tr>
-`
-
-tbody.innerHTML+=row
-
-}
-
-drawCharts(fc,ac,occ)
-
-}
-
-
-function drawCharts(fc,ac,occ){
-
-if(forecastChart) forecastChart.destroy()
-if(occChart) occChart.destroy()
-if(intradayChart) intradayChart.destroy()
-
-forecastChart=new Chart(document.getElementById("forecastChart"),{
-
-type:"bar",
-data:{
-labels:fc.map((_,i)=>"Int "+(i+1)),
-datasets:[
-{label:"Forecast",data:fc},
-{label:"Actual",data:ac}
-]
-}
-
-})
-
-occChart=new Chart(document.getElementById("occupancyChart"),{
-
-type:"line",
-data:{
-labels:occ.map((_,i)=>"Int "+(i+1)),
-datasets:[
-{label:"Occupancy %",data:occ}
-]
-}
-
-})
-
-intradayChart=new Chart(document.getElementById("intradayChart"),{
-
-type:"line",
-data:{
-labels:fc.map((_,i)=>"Interval "+(i+1)),
-datasets:[
-{label:"Calls Trend",data:fc}
-]
-}
-
-})
-
-createHeatmap(occ)
-
-}
-
-
-function simulateErlang(){
-
-let calls=Number(document.getElementById("ecalls").value)
-let aht=Number(document.getElementById("eaht").value)
-let agents=Number(document.getElementById("eagents").value)
-
-let workload=(calls*aht)/3600
-let occ=(workload/agents)
-
-let sl=Math.max(0,100-(occ*100))
-
-document.getElementById("erlangResult").innerText="Estimated Service Level: "+sl.toFixed(1)+"%"
-
-drawSLCurve(calls,aht)
-
-}
-
-
-function drawSLCurve(calls,aht){
-
-let staffing=[]
-let sl=[]
-
-for(let i=5;i<60;i++){
-
-let workload=(calls*aht)/3600
-let occ=workload/i
-let service=Math.max(0,100-(occ*100))
-
-staffing.push(i)
-sl.push(service)
-
-}
-
-if(slCurve) slCurve.destroy()
-
-slCurve=new Chart(document.getElementById("slCurve"),{
-
-type:"line",
-data:{
-labels:staffing,
-datasets:[
-{label:"Service Level %",data:sl}
-]
-}
-
-})
-
-}
-
-
-function createHeatmap(data){
-
-if(heatmap) heatmap.destroy()
-
-heatmap=new Chart(document.getElementById("heatmap"),{
-
-type:"bar",
-data:{
-labels:data.map((_,i)=>"Int "+(i+1)),
-datasets:[
-{label:"Occupancy Heat",data:data}
-]
-}
-
-})
-
-}
-
-
-
-function handleFile(file){
-
-let name=file.name
-
-if(name.endsWith(".csv")){
-
-Papa.parse(file,{
-header:true,
-complete:function(res){
-populate(res.data)
-}
-})
-
-}
-
-else{
-
-let reader=new FileReader()
-
-reader.onload=function(e){
-
-let data=new Uint8Array(e.target.result)
-let workbook=XLSX.read(data,{type:"array"})
-let sheet=workbook.Sheets[workbook.SheetNames[0]]
-let json=XLSX.utils.sheet_to_json(sheet)
-
-populate(json)
-
-}
-
-reader.readAsArrayBuffer(file)
-
-}
-
-}
-
-
-
-function populate(rows){
-
-let calls=[]
-let actual=[]
-let aht=[]
-let agents=[]
-
-rows.forEach(r=>{
-
-calls.push(Number(r.Forecast))
-actual.push(Number(r.Actual))
-aht.push(Number(r.AHT))
-agents.push(Number(r.Agents))
-
-})
-
-document.getElementById("calls").value=calls.join(",")
-document.getElementById("actual").value=actual.join(",")
-document.getElementById("aht").value=aht.join(",")
-document.getElementById("agents").value=agents.join(",")
-
-alert("File uploaded. Click Run Analysis.")
-
-}
-
-
-document.getElementById("fileInput").addEventListener("change",function(e){
-
-handleFile(e.target.files[0])
-
-})
-
-
-let drop=document.getElementById("dropZone")
-
-drop.addEventListener("dragover",(e)=>{
-e.preventDefault()
-})
-
-drop.addEventListener("drop",(e)=>{
-
-e.preventDefault()
-
-handleFile(e.dataTransfer.files[0])
-
-})
-
-</script>
+        <div id="forecastAccuracyResult" class="result-box"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Erlang Simulation</h2>
+
+    Calls <input id="simCalls">
+    AHT <input id="simAht">
+    Agents <input id="simAgents">
+
+    <button onclick="simulateErlang()">Run Simulation</button>
+
+    <div id="erlangResult" class="result-box"></div>
+
+    <div class="small-chart-box">
+      <canvas id="slCurve"></canvas>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Occupancy Heatmap</h2>
+    <div class="small-chart-box">
+      <canvas id="heatmap"></canvas>
+    </div>
+    <div class="muted">Higher bars indicate heavier occupancy pressure by interval.</div>
+  </div>
+
+  <script>
+    let forecastChart = null;
+    let occChart = null;
+    let intradayChart = null;
+    let slCurveChart = null;
+    let heatmapChart = null;
+
+    function parseCommaNumbers(value) {
+      return value
+        .split(",")
+        .map(v => Number(String(v).trim()))
+        .filter(v => !Number.isNaN(v));
+    }
+
+    function formatPercent(value) {
+      return value.toFixed(1) + "%";
+    }
+
+    function safeDestroy(chartRef) {
+      if (chartRef) {
+        chartRef.destroy();
+      }
+    }
+
+    function runAnalysis() {
+      const calls = parseCommaNumbers(document.getElementById("calls").value);
+      const actual = parseCommaNumbers(document.getElementById("actual").value);
+      const aht = parseCommaNumbers(document.getElementById("aht").value);
+      const agents = parseCommaNumbers(document.getElementById("agents").value);
+
+      if (!calls.length || !aht.length || !agents.length) {
+        alert("Please enter or upload Forecast, AHT, and Agents data first.");
+        return;
+      }
+
+      if (calls.length !== aht.length || calls.length !== agents.length) {
+        alert("Forecast, AHT, and Agents must have the same number of intervals.");
+        return;
+      }
+
+      const tbody = document.querySelector("#results tbody");
+      tbody.innerHTML = "";
+
+      const occ = [];
+      const fc = [];
+      const ac = [];
+
+      for (let i = 0; i < calls.length; i++) {
+        const forecastVal = calls[i];
+        const actualVal = actual[i] ?? 0;
+        const ahtVal = aht[i];
+        const agentVal = agents[i];
+
+        if (agentVal <= 0) {
+          alert("Agents cannot be zero or blank.");
+          return;
+        }
+
+        const workload = (forecastVal * ahtVal) / 3600;
+        const fte = workload / 0.85;
+        const occupancy = (workload / agentVal) * 100;
+        const accuracy = actual.length
+          ? Math.max(0, 100 - (Math.abs(actualVal - forecastVal) / Math.max(forecastVal, 1)) * 100)
+          : 0;
+
+        occ.push(Number(occupancy.toFixed(2)));
+        fc.push(forecastVal);
+        ac.push(actualVal);
+
+        const row = `
+          <tr>
+            <td>${i + 1}</td>
+            <td>${forecastVal}</td>
+            <td>${actual.length ? actualVal : "-"}</td>
+            <td>${ahtVal}</td>
+            <td>${agentVal}</td>
+            <td>${workload.toFixed(2)}</td>
+            <td>${fte.toFixed(2)}</td>
+            <td>${formatPercent(occupancy)}</td>
+            <td>${actual.length ? formatPercent(accuracy) : "-"}</td>
+          </tr>
+        `;
+        tbody.innerHTML += row;
+      }
+
+      drawCharts(fc, ac, occ);
+      createHeatmap(occ);
+      generateRCA(fc, ac, occ, aht, agents);
+    }
+
+    function baseChartOptions(yTitle) {
+      return {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: "top"
+          }
+        },
+        scales: {
+          x: {
+            title: {
+              display: true,
+              text: "Intervals"
+            }
+          },
+          y: {
+            beginAtZero: true,
+            title: {
+              display: true,
+              text: yTitle
+            }
+          }
+        }
+      };
+    }
+
+    function drawCharts(fc, ac, occ) {
+      safeDestroy(forecastChart);
+      safeDestroy(occChart);
+      safeDestroy(intradayChart);
+
+      const labels = fc.map((_, i) => "Int " + (i + 1));
+
+      forecastChart = new Chart(document.getElementById("forecastChart"), {
+        type: "bar",
+        data: {
+          labels,
+          datasets: [
+            {
+              label: "Forecast",
+              data: fc
+            },
+            {
+              label: "Actual",
+              data: ac
+            }
+          ]
+        },
+        options: baseChartOptions("Call Volume")
+      });
+
+      occChart = new Chart(document.getElementById("occupancyChart"), {
+        type: "line",
+        data: {
+          labels,
+          datasets: [
+            {
+              label: "Occupancy %",
+              data: occ,
+              tension: 0.3
+            }
+          ]
+        },
+        options: {
+          ...baseChartOptions("Occupancy %"),
+          scales: {
+            x: {
+              title: {
+                display: true,
+                text: "Intervals"
+              }
+            },
+            y: {
+              beginAtZero: true,
+              suggestedMax: 120,
+              title: {
+                display: true,
+                text: "Occupancy %"
+              }
+            }
+          }
+        }
+      });
+
+      intradayChart = new Chart(document.getElementById("intradayChart"), {
+        type: "line",
+        data: {
+          labels,
+          datasets: [
+            {
+              label: "Forecast Trend",
+              data: fc,
+              tension: 0.3
+            },
+            {
+              label: "Actual Trend",
+              data: ac,
+              tension: 0.3
+            }
+          ]
+        },
+        options: baseChartOptions("Call Volume")
+      });
+    }
+
+    function generateRCA(fc, ac, occ, aht, agents) {
+      let avgOcc = occ.reduce((sum, v) => sum + v, 0) / occ.length;
+      let avgAccuracy = 0;
+
+      if (ac.some(v => v > 0)) {
+        avgAccuracy = fc.reduce((sum, f, i) => {
+          const actualVal = ac[i] || 0;
+          const acc = Math.max(0, 100 - (Math.abs(actualVal - f) / Math.max(f, 1)) * 100);
+          return sum + acc;
+        }, 0) / fc.length;
+      }
+
+      const maxAht = Math.max(...aht);
+      const minAgents = Math.min(...agents);
+
+      let rca = [];
+      let actions = [];
+
+      if (ac.some(v => v > 0) && avgAccuracy < 90) {
+        rca.push("Forecast accuracy is below 90%, which suggests forecast variance across intervals.");
+        actions.push("Review historical pattern selection and add intraday reforecast checkpoints.");
+      }
+
+      if (avgOcc > 90) {
+        rca.push("Occupancy is running very high, which points to staffing pressure or higher-than-planned workload.");
+        actions.push("Add staffing buffer on peak intervals or reduce shrinkage during critical windows.");
+      } else if (avgOcc < 65) {
+        rca.push("Occupancy is low, which suggests overstaffing or lower workload than planned.");
+        actions.push("Rebalance schedules, reduce excess staffing, or move support to other queues.");
+      }
+
+      if (maxAht > 450) {
+        rca.push("AHT is elevated in at least one interval, which may be affecting service performance.");
+        actions.push("Check process bottlenecks, call drivers, and coaching opportunities for long calls.");
+      }
+
+      if (minAgents < 1) {
+        rca.push("One or more intervals show invalid agent data.");
+        actions.push("Validate uploaded staffing data before decision-making.");
+      }
+
+      if (!rca.length) {
+        rca.push("No major operational risk detected from the uploaded data.");
+        actions.push("Continue monitoring forecast, AHT, and occupancy by interval.");
+      }
+
+      document.getElementById("rcaBox").innerHTML =
+        "<strong>RCA</strong><br>" + rca.join("<br><br>") +
+        "<br><br><strong>Action Plan</strong><br>" + actions.join("<br><br>");
+    }
+
+    function erlangCProbabilityWait(traffic, agents) {
+      if (agents <= traffic) return 1;
+
+      let sum = 0;
+      for (let k = 0; k < agents; k++) {
+        sum += Math.pow(traffic, k) / factorial(k);
+      }
+
+      const top = (Math.pow(traffic, agents) / factorial(agents)) * (agents / (agents - traffic));
+      return top / (sum + top);
+    }
+
+    function factorial(n) {
+      if (n <= 1) return 1;
+      let result = 1;
+      for (let i = 2; i <= n; i++) result *= i;
+      return result;
+    }
+
+    function serviceLevelErlangC(calls, ahtSec, agents, targetAnsSec, intervalSec) {
+      const traffic = (calls * ahtSec) / intervalSec;
+      if (agents <= traffic) return 0;
+
+      const pw = erlangCProbabilityWait(traffic, agents);
+      const exponent = -(agents - traffic) * (targetAnsSec / ahtSec);
+      const sl = 1 - (pw * Math.exp(exponent));
+      return Math.max(0, Math.min(1, sl));
+    }
+
+    function calcShrinkage() {
+      const sch = Number(document.getElementById("sch").value);
+      const pl = Number(document.getElementById("pl").value);
+      const upl = Number(document.getElementById("upl").value);
+      const woff = Number(document.getElementById("woff").value);
+
+      if (!sch) {
+        document.getElementById("shrinkResult").innerText = "Please enter Scheduled HC.";
+        return;
+      }
+
+      const shrink = ((pl + upl + woff) / sch) * 100;
+      document.getElementById("shrinkResult").innerText = "Shrinkage: " + shrink.toFixed(2) + "%";
+    }
+
+    function capacityCalc() {
+      const calls = Number(document.getElementById("ccalls").value);
+      const aht = Number(document.getElementById("caht").value);
+      const shrink = Number(document.getElementById("cshrink").value) / 100;
+
+      const workload = (calls * aht) / 3600;
+      const rawFTE = workload / 0.85;
+      const finalFTE = shrink < 1 ? rawFTE / (1 - shrink) : rawFTE;
+
+      document.getElementById("capacityResult").innerText =
+        "Workload Hours: " + workload.toFixed(2) +
+        " | Required FTE: " + finalFTE.toFixed(2);
+    }
+
+    function erlangStaffingCalc() {
+      const calls = Number(document.getElementById("ecalls").value);
+      const aht = Number(document.getElementById("eaht").value);
+      const targetSL = Number(document.getElementById("esl").value || 80) / 100;
+
+      const intervalSec = 3600;
+      const targetAnsSec = 20;
+      const traffic = (calls * aht) / intervalSec;
+
+      let agents = Math.max(1, Math.ceil(traffic));
+      let achievedSL = 0;
+
+      while (agents < 500) {
+        achievedSL = serviceLevelErlangC(calls, aht, agents, targetAnsSec, intervalSec);
+        if (achievedSL >= targetSL) break;
+        agents++;
+      }
+
+      const occupancy = (traffic / agents) * 100;
+
+      document.getElementById("erlangStaffingResult").innerText =
+        "Required Agents: " + agents +
+        " | Achieved SL: " + (achievedSL * 100).toFixed(1) + "%" +
+        " | Occupancy: " + occupancy.toFixed(1) + "%";
+    }
+
+    function predictSL() {
+      const calls = Number(document.getElementById("slcalls").value);
+      const aht = Number(document.getElementById("slaht").value);
+      const agents = Number(document.getElementById("slagents").value);
+
+      if (!calls || !aht || !agents) {
+        document.getElementById("slResult").innerText = "Please enter Calls, AHT, and Agents.";
+        return;
+      }
+
+      const sl = serviceLevelErlangC(calls, aht, agents, 20, 3600) * 100;
+      document.getElementById("slResult").innerText = "Estimated Service Level: " + sl.toFixed(1) + "%";
+    }
+
+    function reforecast() {
+      const f = Number(document.getElementById("rf").value);
+      const a = Number(document.getElementById("ra").value);
+      const r = Number(document.getElementById("rr").value);
+
+      if (!f || !r) {
+        document.getElementById("rfResult").innerText = "Please enter Forecast and Remaining Forecast.";
+        return;
+      }
+
+      const varianceRatio = f === 0 ? 1 : a / f;
+      const newF = r * varianceRatio;
+
+      document.getElementById("rfResult").innerText =
+        "Updated Remaining Forecast: " + Math.round(newF);
+    }
+
+    function forecastAccuracyCalc() {
+      const forecast = Number(document.getElementById("facForecast").value);
+      const actual = Number(document.getElementById("facActual").value);
+
+      if (!forecast) {
+        document.getElementById("forecastAccuracyResult").innerText = "Please enter Forecast.";
+        return;
+      }
+
+      const accuracy = Math.max(0, 100 - (Math.abs(actual - forecast) / forecast) * 100);
+
+      document.getElementById("forecastAccuracyResult").innerText =
+        "Forecast Accuracy: " + accuracy.toFixed(2) + "%";
+    }
+
+    function simulateErlang() {
+      const calls = Number(document.getElementById("simCalls").value);
+      const aht = Number(document.getElementById("simAht").value);
+      const agents = Number(document.getElementById("simAgents").value);
+
+      if (!calls || !aht || !agents) {
+        document.getElementById("erlangResult").innerText = "Please enter Calls, AHT, and Agents.";
+        return;
+      }
+
+      const sl = serviceLevelErlangC(calls, aht, agents, 20, 3600) * 100;
+      const traffic = (calls * aht) / 3600;
+      const occupancy = (traffic / agents) * 100;
+
+      document.getElementById("erlangResult").innerText =
+        "Estimated Service Level: " + sl.toFixed(1) + "% | Occupancy: " + occupancy.toFixed(1) + "%";
+
+      drawSLCurve(calls, aht);
+    }
+
+    function drawSLCurve(calls, aht) {
+      safeDestroy(slCurveChart);
+
+      const staffing = [];
+      const sl = [];
+
+      for (let i = 5; i <= 60; i++) {
+        staffing.push(i);
+        sl.push((serviceLevelErlangC(calls, aht, i, 20, 3600) * 100).toFixed(2));
+      }
+
+      slCurveChart = new Chart(document.getElementById("slCurve"), {
+        type: "line",
+        data: {
+          labels: staffing,
+          datasets: [
+            {
+              label: "Service Level %",
+              data: sl,
+              tension: 0.3
+            }
+          ]
+        },
+        options: {
+          ...baseChartOptions("Service Level %"),
+          scales: {
+            x: {
+              title: {
+                display: true,
+                text: "Agents"
+              }
+            },
+            y: {
+              beginAtZero: true,
+              suggestedMax: 100,
+              title: {
+                display: true,
+                text: "Service Level %"
+              }
+            }
+          }
+        }
+      });
+    }
+
+    function createHeatmap(data) {
+      safeDestroy(heatmapChart);
+
+      heatmapChart = new Chart(document.getElementById("heatmap"), {
+        type: "bar",
+        data: {
+          labels: data.map((_, i) => "Int " + (i + 1)),
+          datasets: [
+            {
+              label: "Occupancy %",
+              data: data
+            }
+          ]
+        },
+        options: {
+          ...baseChartOptions("Occupancy %"),
+          scales: {
+            x: {
+              title: {
+                display: true,
+                text: "Intervals"
+              }
+            },
+            y: {
+              beginAtZero: true,
+              suggestedMax: 120,
+              title: {
+                display: true,
+                text: "Occupancy %"
+              }
+            }
+          }
+        }
+      });
+    }
+
+    function handleFile(file) {
+      if (!file) return;
+
+      const name = file.name.toLowerCase();
+
+      if (name.endsWith(".csv")) {
+        Papa.parse(file, {
+          header: true,
+          skipEmptyLines: true,
+          complete: function (res) {
+            populate(res.data);
+          }
+        });
+      } else if (name.endsWith(".xlsx") || name.endsWith(".xls")) {
+        const reader = new FileReader();
+
+        reader.onload = function (e) {
+          const data = new Uint8Array(e.target.result);
+          const workbook = XLSX.read(data, { type: "array" });
+          const sheet = workbook.Sheets[workbook.SheetNames[0]];
+          const json = XLSX.utils.sheet_to_json(sheet);
+          populate(json);
+        };
+
+        reader.readAsArrayBuffer(file);
+      } else {
+        alert("Please upload a CSV or Excel file.");
+      }
+    }
+
+    function populate(rows) {
+      const calls = [];
+      const actual = [];
+      const aht = [];
+      const agents = [];
+
+      rows.forEach(r => {
+        const f = Number(r.Forecast);
+        const a = Number(r.Actual);
+        const h = Number(r.AHT);
+        const ag = Number(r.Agents);
+
+        if (!Number.isNaN(f) && !Number.isNaN(h) && !Number.isNaN(ag)) {
+          calls.push(f);
+          actual.push(Number.isNaN(a) ? 0 : a);
+          aht.push(h);
+          agents.push(ag);
+        }
+      });
+
+      document.getElementById("calls").value = calls.join(",");
+      document.getElementById("actual").value = actual.join(",");
+      document.getElementById("aht").value = aht.join(",");
+      document.getElementById("agents").value = agents.join(",");
+
+      alert("File uploaded. Click Run Analysis.");
+    }
+
+    document.getElementById("fileInput").addEventListener("change", function (e) {
+      handleFile(e.target.files[0]);
+    });
+
+    const drop = document.getElementById("dropZone");
+
+    drop.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      drop.classList.add("dragover");
+    });
+
+    drop.addEventListener("dragleave", () => {
+      drop.classList.remove("dragover");
+    });
+
+    drop.addEventListener("drop", (e) => {
+      e.preventDefault();
+      drop.classList.remove("dragover");
+      handleFile(e.dataTransfer.files[0]);
+    });
+
+    function runAIAssistant() {
+      const text = document.getElementById("aiPrompt").value.toLowerCase();
+      const nums = text.match(/\d+(\.\d+)?/g) || [];
+      const output = document.getElementById("aiResponse");
+
+      if (!nums.length) {
+        output.innerHTML = "Please enter a question with numbers, for example: <strong>250 calls, AHT 420, shrinkage 30</strong>.";
+        return;
+      }
+
+      if (text.includes("forecast") && text.includes("actual") && nums.length >= 2) {
+        const forecast = Number(nums[0]);
+        const actual = Number(nums[1]);
+        const accuracy = Math.max(0, 100 - (Math.abs(actual - forecast) / Math.max(forecast, 1)) * 100);
+
+        output.innerHTML =
+          "Forecast Accuracy: <strong>" + accuracy.toFixed(2) + "%</strong><br>" +
+          "Interpretation: " + (accuracy >= 90 ? "Forecast is stable." : "Forecast variance is high and needs review.");
+        return;
+      }
+
+      if ((text.includes("call") || text.includes("calls")) && text.includes("aht")) {
+        const calls = Number(nums[0] || 0);
+        const aht = Number(nums[1] || 0);
+        const shrink = Number(nums[2] || 0);
+
+        const workload = (calls * aht) / 3600;
+        const agents = Math.ceil((workload / 0.85) / (1 - (shrink / 100 || 0)));
+
+        output.innerHTML =
+          "Estimated Agents Needed: <strong>" + agents + "</strong><br>" +
+          "Workload Hours: <strong>" + workload.toFixed(2) + "</strong><br>" +
+          "Explanation: Calculated from calls × AHT, then adjusted for productivity and shrinkage.";
+        return;
+      }
+
+      if (text.includes("agents") && text.includes("aht") && nums.length >= 3) {
+        const calls = Number(nums[0]);
+        const aht = Number(nums[1]);
+        const agents = Number(nums[2]);
+        const sl = serviceLevelErlangC(calls, aht, agents, 20, 3600) * 100;
+
+        output.innerHTML =
+          "Estimated Service Level: <strong>" + sl.toFixed(1) + "%</strong><br>" +
+          "Explanation: Based on Erlang C logic using calls, AHT, and agents.";
+        return;
+      }
+
+      output.innerHTML =
+        "I could not confidently interpret that query yet. Try something like:<br>" +
+        "<strong>250 calls, AHT 420, shrinkage 30</strong><br>" +
+        "<strong>forecast 500, actual 450</strong>";
+    }
+  </script>
 
 </body>
 </html>
