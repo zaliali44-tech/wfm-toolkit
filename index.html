@@ -442,3 +442,54 @@ document.getElementById("rfResult").innerText="Updated Remaining Forecast: "+Mat
 
 </html>
 
+const dropZone = document.getElementById("dropZone")
+
+dropZone.addEventListener("dragover", (e)=>{
+e.preventDefault()
+dropZone.style.background="#dbe9ff"
+})
+
+dropZone.addEventListener("dragleave", ()=>{
+dropZone.style.background="#f0f6ff"
+})
+
+dropZone.addEventListener("drop",(e)=>{
+
+e.preventDefault()
+
+let file = e.dataTransfer.files[0]
+
+Papa.parse(file,{
+
+header:true,
+
+complete:function(results){
+
+let data = results.data
+
+let calls=[]
+let actual=[]
+let aht=[]
+let agents=[]
+
+data.forEach(row=>{
+
+calls.push(Number(row.Forecast))
+actual.push(Number(row.Actual))
+aht.push(Number(row.AHT))
+agents.push(Number(row.Agents))
+
+})
+
+document.getElementById("calls").value=calls.join(",")
+document.getElementById("actual").value=actual.join(",")
+document.getElementById("aht").value=aht.join(",")
+document.getElementById("agents").value=agents.join(",")
+
+alert("File uploaded successfully. Click Run Analysis.")
+
+}
+
+})
+
+})
