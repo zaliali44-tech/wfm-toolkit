@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+<title>WFM Toolkit with Charts</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+body {
+  font-family: "Segoe UI", Arial, sans-serif;
+  margin: 0;
+  background: #f0f4f8;
+}
+header {
+  background: #1f2937;
+  color: white;
+  padding: 25px;
+  text-align: center;
+}
+header h1 { margin: 0; font-size: 28px; }
+header p { margin: 5px 0 0 0; font-size: 16px; color: #d1d5db; }
+nav {
+  display: flex;
+  justify-content: center;
+  background: #374151;
+}
+nav button {
+  background: none;
+  border: none;
+  color: #e5e7eb;
+  padding: 15px 30px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: 0.3s;
+}
+nav button:hover { background: #4b5563; }
+.container {
+  max-width: 900px;
+  margin: 30px auto;
+  padding: 0 20px;
+}
+.tool {
+  background: white;
+  padding: 25px;
+  margin-bottom: 25px;
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+.tool h2 { margin-top: 0; color: #111827; }
+input {
+  width: 100%;
+  padding: 10px;
+  margin: 6px 0 12px 0;
+  border-radius: 5px;
+  border: 1px solid #d1d5db;
+  font-size: 14px;
+}
+button.calculate {
+  background: #2563eb;
+  color: white;
+  padding: 12px;
+  border: none;
+  width: 100%;
+  font-size: 16px;
+  cursor: pointer;
+  border-radius: 5px;
+  transition: 0.2s;
+}
+button.calculate:hover { background: #1d4ed8; }
+.result { margin-top: 12px; font-weight: bold; font-size: 16px; color: #1f2937; }
+.tab { display: none; }
+canvas { margin-top: 15px; }
+</style>
+</head>
+
+<body>
+<header>
+<h1>Free WFM Toolkit</h1>
+<p>Staffing, Forecasting & Operations Calculators with Charts</p>
+</header>
+
+<nav>
+<button onclick="openTab('staffing')">Staffing</button>
+<button onclick="openTab('forecast')">Forecasting</button>
+<button onclick="openTab('operations')">Operations</button>
+</nav>
+
+<div class="container">
+
+<!-- STAFFING -->
+<div id="staffing" class="tab">
+
+<div class="tool">
+<h2>Workload Calculator</h2>
+<input id="volume" placeholder="Volume">
+<input id="aht" placeholder="AHT (seconds)">
+<button class="calculate" onclick="workload()">Calculate</button>
+<div id="workload_result" class="result"></div>
+</div>
+
+<div class="tool">
+<h2>Capacity Planner</h2>
+<input id="cap_volume" placeholder="Volume">
+<input id="cap_aht" placeholder="AHT">
+<input id="shrink" placeholder="Shrinkage %">
+<button class="calculate" onclick="capacity()">Calculate</button>
+<div id="capacity_result" class="result"></div>
+</div>
+
+<div class="tool">
+<h2>Occupancy Calculator</h2>
+<input id="occ_volume" placeholder="Volume">
+<input id="occ_aht" placeholder="AHT">
+<input id="agents" placeholder="Agents">
+<button class="calculate" onclick="occupancy()">Calculate</button>
+<div id="occ_result" class="result"></div>
+</div>
+
+<div class="tool">
+<h2>Erlang Staffing Calculator</h2>
+<input id="erlang_volume" placeholder="Volume">
+<input id="erlang_aht" placeholder="AHT (seconds)">
+<input id="erlang_interval" placeholder="Interval (hours)">
+<input id="erlang_sl" placeholder="Service Level Target %">
+<button class="calculate" onclick="erlangCalculator()">Calculate</button>
+<div id="erlang_result" class="result"></div>
+<canvas id="erlangChart" height="150"></canvas>
+</div>
+
+<div class="tool">
+<h2>Service Level Predictor</h2>
+<input id="sl_agents" placeholder="Agents Available">
+<input id="sl_volume" placeholder="Volume">
+<input id="sl_aht" placeholder="AHT">
+<input id="sl_interval" placeholder="Interval (hours)">
+<button class="calculate" onclick="serviceLevel()">Calculate</button>
+<div id="sl_result" class="result"></div>
+</div>
+
+</div>
+
+<!-- FORECAST -->
+<div id="forecast" class="tab">
+
+<div class="tool">
+<h2>Forecast Accuracy</h2>
+<input id="forecast_value" placeholder="Forecast">
+<input id="actual_value" placeholder="Actual">
+<button class="calculate" onclick="accuracy()">Calculate</button>
+<div id="accuracy_result" class="result"></div>
+<canvas id="accuracyChart" height="150"></canvas>
+</div>
+
+<div class="tool">
+<h2>Moving Average Forecast</h2>
+<input id="d1" placeholder="Week 1">
+<input id="d2" placeholder="Week 2">
+<input id="d3" placeholder="Week 3">
+<button class="calculate" onclick="movingAverage()">Calculate</button>
+<div id="ma_result" class="result"></div>
+</div>
+
+<div class="tool">
+<h2>Intraday Reforecast Tool</h2>
+<input id="original_forecast" placeholder="Original Forecast for Day">
+<input id="actual_so_far" placeholder="Actual Volume So Far">
+<input id="remaining_interval" placeholder="Remaining Hours/Intervals">
+<button class="calculate" onclick="intradayReforecast()">Calculate</button>
+<div id="reforecast_result" class="result"></div>
+</div>
+
+</div>
+
+<!-- OPERATIONS -->
+<div id="operations" class="tab">
+
+<div class="tool">
+<h2>Shrinkage Calculator</h2>
+<input id="planned" placeholder="Planned Leave">
+<input id="unplanned" placeholder="Unplanned Leave">
+<input id="hc" placeholder="Scheduled HC">
+<button class="calculate" onclick="shrinkage()">Calculate</button>
+<div id="shrink_result" class="result"></div>
+</div>
+
+<div class="tool">
+<h2>Staffing Gap</h2>
+<input id="required" placeholder="Required Agents">
+<input id="scheduled" placeholder="Scheduled Agents">
+<button class="calculate" onclick="gap()">Calculate</button>
+<div id="gap_result" class="result"></div>
+<canvas id="gapChart" height="150"></canvas>
+</div>
+
+</div>
+
+</div>
+
+<script>
+function openTab(tab){
+document.querySelectorAll(".tab").forEach(t=>t.style.display="none");
+document.getElementById(tab).style.display="block";
+}
+openTab("staffing");
+
+// Calculators
+function workload(){
+let v=Number(document.getElementById("volume").value);
+let a=Number(document.getElementById("aht").value);
+let w=(v*a)/3600;
+document.getElementById("workload_result").innerText="Workload Hours: "+w.toFixed(2);
+}
+
+function capacity(){
+let v=Number(document.getElementById("cap_volume").value);
+let a=Number(document.getElementById("cap_aht").value);
+let s=Number(document.getElementById("shrink").value)/100;
+let workload=(v*a)/3600;
+let agents=workload/8;
+let req=agents/(1-s);
+document.getElementById("capacity_result").innerText="Required HC: "+Math.ceil(req);
+}
+
+function occupancy(){
+let v=Number(document.getElementById("occ_volume").value);
+let a=Number(document.getElementById("occ_aht").value);
+let ag=Number(document.getElementById("agents").value);
+let occ=((v*a)/3600)/(ag*8);
+document.getElementById("occ_result").innerText="Occupancy: "+(occ*100).toFixed(2)+"%";
+}
+
+function erlangCalculator(){
+let v=Number(document.getElementById("erlang_volume").value);
+let a=Number(document.getElementById("erlang_aht").value);
+let interval=Number(document.getElementById("erlang_interval").value);
+let sl=Number(document.getElementById("erlang_sl").value);
+let workload=(v*a)/3600;
+let agents=workload/interval*(1+(1-sl/100));
+document.getElementById("erlang_result").innerText="Required Agents: "+Math.ceil(agents);
+// Chart
+let ctx=document.getElementById("erlangChart").getContext('2d');
+if(window.erlangChart) window.erlangChart.destroy();
+window.erlangChart=new Chart(ctx,{
+type:'bar',
+data:{labels:['Required Agents'],datasets:[{label:'Agents',data:[Math.ceil(agents)],backgroundColor:'#2563eb'}]},
+options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}}
+});
+}
+
+function serviceLevel(){
+let agents=Number(document.getElementById("sl_agents").value);
+let v=Number(document.getElementById("sl_volume").value);
+let a=Number(document.getElementById("sl_aht").value);
+let interval=Number(document.getElementById("sl_interval").value);
+let workload=(v*a)/3600;
+let occupancy=workload/(agents*interval);
+let sl=Math.max(0,(1-occupancy)*100);
+document.getElementById("sl_result").innerText="Predicted Service Level: "+sl.toFixed(2)+"%";
+}
+
+function intradayReforecast(){
+let forecast=Number(document.getElementById("original_forecast").value);
+let actual=Number(document.getElementById("actual_so_far").value);
+let remaining=Number(document.getElementById("remaining_interval").value);
+let remainingForecast=Math.max(0,forecast-actual);
+let adjustedStaff=remainingForecast/remaining;
+document.getElementById("reforecast_result").innerText="Adjusted Staff per Interval: "+Math.ceil(adjustedStaff);
+}
+
+function accuracy(){
+let f=Number(document.getElementById("forecast_value").value);
+let a=Number(document.getElementById("actual_value").value);
+let acc=1-Math.abs(f-a)/a;
+document.getElementById("accuracy_result").innerText="Accuracy: "+(acc*100).toFixed(2)+"%";
+// Chart
+let ctx=document.getElementById("accuracyChart").getContext('2d');
+if(window.accuracyChart) window.accuracyChart.destroy();
+window.accuracyChart=new Chart(ctx,{
+type:'line',
+data:{labels:['Forecast','Actual'],datasets:[{label:'Values',data:[f,a],borderColor:'#2563eb',fill:false, tension:0.3}]},
+options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}}
+});
+}
+
+function movingAverage(){
+let d1=Number(document.getElementById("d1").value);
+let d2=Number(document.getElementById("d2").value);
+let d3=Number(document.getElementById("d3").value);
+let avg=(d1+d2+d3)/3;
+document.getElementById("ma_result").innerText="Next Forecast: "+avg.toFixed(0);
+}
+
+function shrinkage(){
+let p=Number(document.getElementById("planned").value);
+let u=Number(document.getElementById("unplanned").value);
+let hc=Number(document.getElementById("hc").value);
+let s=(p+u)/hc*100;
+document.getElementById("shrink_result").innerText="Shrinkage: "+s.toFixed(2)+"%";
+}
+
+function gap(){
+let r=Number(document.getElementById("required").value);
+let s=Number(document.getElementById("scheduled").value);
+let g=s-r;
+document.getElementById("gap_result").innerText="Staffing Gap: "+g;
+// Chart
+let ctx=document.getElementById("gapChart").getContext('2d');
+if(window.gapChart) window.gapChart.destroy();
+window.gapChart=new Chart(ctx,{
+type:'bar',
+data:{labels:['Staffing Gap'],datasets:[{label:'Gap',data:[g],backgroundColor:g>=0?'#10b981':'#ef4444'}]},
+options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}}
+});
+}
+</script>
+
+</body>
+</html>
