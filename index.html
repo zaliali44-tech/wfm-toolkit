@@ -2,317 +2,443 @@
 <html>
 
 <head>
-<title>WFM Toolkit with Charts</title>
+
+<title>WFM Analytics Toolkit</title>
+
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
+
 <style>
-body {
-  font-family: "Segoe UI", Arial, sans-serif;
-  margin: 0;
-  background: #f0f4f8;
+
+body{
+font-family:Arial;
+background:#f5f7fb;
+margin:40px;
 }
-header {
-  background: #1f2937;
-  color: white;
-  padding: 25px;
-  text-align: center;
+
+h1{
+text-align:center;
 }
-header h1 { margin: 0; font-size: 28px; }
-header p { margin: 5px 0 0 0; font-size: 16px; color: #d1d5db; }
-nav {
-  display: flex;
-  justify-content: center;
-  background: #374151;
+
+.dashboard{
+display:grid;
+grid-template-columns:1fr 1fr;
+gap:20px;
 }
-nav button {
-  background: none;
-  border: none;
-  color: #e5e7eb;
-  padding: 15px 30px;
-  cursor: pointer;
-  font-size: 16px;
-  transition: 0.3s;
+
+.section{
+background:white;
+padding:20px;
+border-radius:10px;
+box-shadow:0 3px 10px rgba(0,0,0,0.08);
 }
-nav button:hover { background: #4b5563; }
-.container {
-  max-width: 900px;
-  margin: 30px auto;
-  padding: 0 20px;
+
+input{
+padding:6px;
+margin:4px;
 }
-.tool {
-  background: white;
-  padding: 25px;
-  margin-bottom: 25px;
-  border-radius: 10px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+
+button{
+padding:8px 14px;
+background:#2c7be5;
+color:white;
+border:none;
+border-radius:6px;
+cursor:pointer;
 }
-.tool h2 { margin-top: 0; color: #111827; }
-input {
-  width: 100%;
-  padding: 10px;
-  margin: 6px 0 12px 0;
-  border-radius: 5px;
-  border: 1px solid #d1d5db;
-  font-size: 14px;
+
+table{
+width:100%;
+margin-top:15px;
+border-collapse:collapse;
 }
-button.calculate {
-  background: #2563eb;
-  color: white;
-  padding: 12px;
-  border: none;
-  width: 100%;
-  font-size: 16px;
-  cursor: pointer;
-  border-radius: 5px;
-  transition: 0.2s;
+
+th,td{
+border:1px solid #ddd;
+padding:8px;
+text-align:center;
 }
-button.calculate:hover { background: #1d4ed8; }
-.result { margin-top: 12px; font-weight: bold; font-size: 16px; color: #1f2937; }
-.tab { display: none; }
-canvas { margin-top: 15px; }
+
+th{
+background:#eef2f7;
+}
+
+#dropZone{
+border:2px dashed #2c7be5;
+padding:25px;
+text-align:center;
+margin-top:15px;
+border-radius:10px;
+background:#f0f6ff;
+}
+
+canvas{
+margin-top:20px;
+}
+
+.instructions{
+background:#eef6ff;
+padding:12px;
+border-radius:8px;
+margin-bottom:10px;
+}
+
 </style>
+
 </head>
 
 <body>
-<header>
-<h1>Free WFM Toolkit</h1>
-<p>Staffing, Forecasting & Operations Calculators with Charts</p>
-</header>
 
-<nav>
-<button onclick="openTab('staffing')">Staffing</button>
-<button onclick="openTab('forecast')">Forecasting</button>
-<button onclick="openTab('operations')">Operations</button>
-</nav>
+<h1>WFM Analytics Toolkit</h1>
 
-<div class="container">
+<div class="section">
 
-<!-- STAFFING -->
-<div id="staffing" class="tab">
+<h2>Instructions</h2>
 
-<div class="tool">
-<h2>Workload Calculator</h2>
-<input id="volume" placeholder="Volume">
-<input id="aht" placeholder="AHT (seconds)">
-<button class="calculate" onclick="workload()">Calculate</button>
-<div id="workload_result" class="result"></div>
-</div>
+<div class="instructions">
 
-<div class="tool">
-<h2>Capacity Planner</h2>
-<input id="cap_volume" placeholder="Volume">
-<input id="cap_aht" placeholder="AHT">
-<input id="shrink" placeholder="Shrinkage %">
-<button class="calculate" onclick="capacity()">Calculate</button>
-<div id="capacity_result" class="result"></div>
-</div>
+Manual Input Example
 
-<div class="tool">
-<h2>Occupancy Calculator</h2>
-<input id="occ_volume" placeholder="Volume">
-<input id="occ_aht" placeholder="AHT">
-<input id="agents" placeholder="Agents">
-<button class="calculate" onclick="occupancy()">Calculate</button>
-<div id="occ_result" class="result"></div>
-</div>
+Calls  
+120,140,150
 
-<div class="tool">
-<h2>Erlang Staffing Calculator</h2>
-<input id="erlang_volume" placeholder="Volume">
-<input id="erlang_aht" placeholder="AHT (seconds)">
-<input id="erlang_interval" placeholder="Interval (hours)">
-<input id="erlang_sl" placeholder="Service Level Target %">
-<button class="calculate" onclick="erlangCalculator()">Calculate</button>
-<div id="erlang_result" class="result"></div>
-<canvas id="erlangChart" height="150"></canvas>
-</div>
+AHT (seconds)  
+420,430,410
 
-<div class="tool">
-<h2>Service Level Predictor</h2>
-<input id="sl_agents" placeholder="Agents Available">
-<input id="sl_volume" placeholder="Volume">
-<input id="sl_aht" placeholder="AHT">
-<input id="sl_interval" placeholder="Interval (hours)">
-<button class="calculate" onclick="serviceLevel()">Calculate</button>
-<div id="sl_result" class="result"></div>
-</div>
+Agents  
+20,22,23
+
+Actual Calls (optional for Forecast Accuracy)
+
+110,145,155
+
+Or upload CSV with columns:
+
+Interval | Forecast | Actual | AHT | Agents
 
 </div>
 
-<!-- FORECAST -->
-<div id="forecast" class="tab">
+Calls <input id="calls">
 
-<div class="tool">
-<h2>Forecast Accuracy</h2>
-<input id="forecast_value" placeholder="Forecast">
-<input id="actual_value" placeholder="Actual">
-<button class="calculate" onclick="accuracy()">Calculate</button>
-<div id="accuracy_result" class="result"></div>
-<canvas id="accuracyChart" height="150"></canvas>
-</div>
+AHT(sec) <input id="aht">
 
-<div class="tool">
-<h2>Moving Average Forecast</h2>
-<input id="d1" placeholder="Week 1">
-<input id="d2" placeholder="Week 2">
-<input id="d3" placeholder="Week 3">
-<button class="calculate" onclick="movingAverage()">Calculate</button>
-<div id="ma_result" class="result"></div>
-</div>
+Agents <input id="agents">
 
-<div class="tool">
-<h2>Intraday Reforecast Tool</h2>
-<input id="original_forecast" placeholder="Original Forecast for Day">
-<input id="actual_so_far" placeholder="Actual Volume So Far">
-<input id="remaining_interval" placeholder="Remaining Hours/Intervals">
-<button class="calculate" onclick="intradayReforecast()">Calculate</button>
-<div id="reforecast_result" class="result"></div>
-</div>
+Actual Calls <input id="actual">
+
+<button onclick="runAnalysis()">Run Analysis</button>
+
+<div id="dropZone">Drag & Drop CSV File Here</div>
 
 </div>
 
-<!-- OPERATIONS -->
-<div id="operations" class="tab">
+<div class="section">
 
-<div class="tool">
+<h2>Results</h2>
+
+<table id="results">
+
+<thead>
+
+<tr>
+
+<th>Interval</th>
+<th>Forecast</th>
+<th>Actual</th>
+<th>AHT</th>
+<th>Agents</th>
+<th>Workload(H)</th>
+<th>Req FTE</th>
+<th>Occupancy</th>
+<th>Utilization</th>
+<th>Forecast Accuracy</th>
+<th>Variance</th>
+<th>Calls/Agent</th>
+
+</tr>
+
+</thead>
+
+<tbody></tbody>
+
+</table>
+
+<canvas id="occChart"></canvas>
+
+<canvas id="forecastChart"></canvas>
+
+</div>
+
+
+<div class="dashboard">
+
+<div class="section">
+
 <h2>Shrinkage Calculator</h2>
-<input id="planned" placeholder="Planned Leave">
-<input id="unplanned" placeholder="Unplanned Leave">
-<input id="hc" placeholder="Scheduled HC">
-<button class="calculate" onclick="shrinkage()">Calculate</button>
-<div id="shrink_result" class="result"></div>
+
+Scheduled HC <input id="sch">
+
+Planned Leave <input id="pl">
+
+Unplanned Leave <input id="upl">
+
+Week Off <input id="woff">
+
+<button onclick="calcShrinkage()">Calculate</button>
+
+<p id="shrinkResult"></p>
+
 </div>
 
-<div class="tool">
-<h2>Staffing Gap</h2>
-<input id="required" placeholder="Required Agents">
-<input id="scheduled" placeholder="Scheduled Agents">
-<button class="calculate" onclick="gap()">Calculate</button>
-<div id="gap_result" class="result"></div>
-<canvas id="gapChart" height="150"></canvas>
+
+<div class="section">
+
+<h2>Capacity Planning</h2>
+
+Forecast Calls <input id="ccalls">
+
+AHT(sec) <input id="caht">
+
+Shrinkage % <input id="cshrink">
+
+<button onclick="capacityCalc()">Calculate</button>
+
+<p id="capacityResult"></p>
+
 </div>
+
+
+<div class="section">
+
+<h2>Erlang C Staffing</h2>
+
+Calls <input id="ecalls">
+
+AHT(sec) <input id="eaht">
+
+Target SL % <input id="esl">
+
+<button onclick="erlang()">Calculate</button>
+
+<p id="erlangResult"></p>
+
+</div>
+
+
+<div class="section">
+
+<h2>Service Level Predictor</h2>
+
+Calls <input id="slcalls">
+
+AHT <input id="slaht">
+
+Agents <input id="slagents">
+
+<button onclick="predictSL()">Predict</button>
+
+<p id="slResult"></p>
+
+</div>
+
+
+<div class="section">
+
+<h2>Intraday Reforecast</h2>
+
+Forecast <input id="rf">
+
+Actual <input id="ra">
+
+Remaining Forecast <input id="rr">
+
+<button onclick="reforecast()">Update</button>
+
+<p id="rfResult"></p>
 
 </div>
 
 </div>
 
 <script>
-function openTab(tab){
-document.querySelectorAll(".tab").forEach(t=>t.style.display="none");
-document.getElementById(tab).style.display="block";
-}
-openTab("staffing");
 
-// Calculators
-function workload(){
-let v=Number(document.getElementById("volume").value);
-let a=Number(document.getElementById("aht").value);
-let w=(v*a)/3600;
-document.getElementById("workload_result").innerText="Workload Hours: "+w.toFixed(2);
-}
+function runAnalysis(){
 
-function capacity(){
-let v=Number(document.getElementById("cap_volume").value);
-let a=Number(document.getElementById("cap_aht").value);
-let s=Number(document.getElementById("shrink").value)/100;
-let workload=(v*a)/3600;
-let agents=workload/8;
-let req=agents/(1-s);
-document.getElementById("capacity_result").innerText="Required HC: "+Math.ceil(req);
-}
+let calls=document.getElementById("calls").value.split(",").map(Number)
+let aht=document.getElementById("aht").value.split(",").map(Number)
+let agents=document.getElementById("agents").value.split(",").map(Number)
+let actual=document.getElementById("actual").value.split(",").map(Number)
 
-function occupancy(){
-let v=Number(document.getElementById("occ_volume").value);
-let a=Number(document.getElementById("occ_aht").value);
-let ag=Number(document.getElementById("agents").value);
-let occ=((v*a)/3600)/(ag*8);
-document.getElementById("occ_result").innerText="Occupancy: "+(occ*100).toFixed(2)+"%";
-}
+let tbody=document.querySelector("#results tbody")
+tbody.innerHTML=""
 
-function erlangCalculator(){
-let v=Number(document.getElementById("erlang_volume").value);
-let a=Number(document.getElementById("erlang_aht").value);
-let interval=Number(document.getElementById("erlang_interval").value);
-let sl=Number(document.getElementById("erlang_sl").value);
-let workload=(v*a)/3600;
-let agents=workload/interval*(1+(1-sl/100));
-document.getElementById("erlang_result").innerText="Required Agents: "+Math.ceil(agents);
-// Chart
-let ctx=document.getElementById("erlangChart").getContext('2d');
-if(window.erlangChart) window.erlangChart.destroy();
-window.erlangChart=new Chart(ctx,{
-type:'bar',
-data:{labels:['Required Agents'],datasets:[{label:'Agents',data:[Math.ceil(agents)],backgroundColor:'#2563eb'}]},
-options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}}
-});
-}
+let occData=[]
+let forecastData=[]
+let actualData=[]
 
-function serviceLevel(){
-let agents=Number(document.getElementById("sl_agents").value);
-let v=Number(document.getElementById("sl_volume").value);
-let a=Number(document.getElementById("sl_aht").value);
-let interval=Number(document.getElementById("sl_interval").value);
-let workload=(v*a)/3600;
-let occupancy=workload/(agents*interval);
-let sl=Math.max(0,(1-occupancy)*100);
-document.getElementById("sl_result").innerText="Predicted Service Level: "+sl.toFixed(2)+"%";
+for(let i=0;i<calls.length;i++){
+
+let workload=(calls[i]*aht[i])/3600
+let reqFTE=workload/0.85
+
+let occ=(workload/agents[i])*100
+let util=occ*0.9
+
+let variance=actual[i]-calls[i]
+
+let accuracy=100-(Math.abs(variance)/calls[i]*100)
+
+let cpa=calls[i]/agents[i]
+
+occData.push(occ)
+forecastData.push(calls[i])
+actualData.push(actual[i])
+
+let row=`
+
+<tr>
+
+<td>${i+1}</td>
+<td>${calls[i]}</td>
+<td>${actual[i]}</td>
+<td>${aht[i]}</td>
+<td>${agents[i]}</td>
+<td>${workload.toFixed(2)}</td>
+<td>${reqFTE.toFixed(2)}</td>
+<td>${occ.toFixed(1)}%</td>
+<td>${util.toFixed(1)}%</td>
+<td>${accuracy.toFixed(1)}%</td>
+<td>${variance}</td>
+<td>${cpa.toFixed(1)}</td>
+
+</tr>
+
+`
+
+tbody.innerHTML+=row
+
 }
 
-function intradayReforecast(){
-let forecast=Number(document.getElementById("original_forecast").value);
-let actual=Number(document.getElementById("actual_so_far").value);
-let remaining=Number(document.getElementById("remaining_interval").value);
-let remainingForecast=Math.max(0,forecast-actual);
-let adjustedStaff=remainingForecast/remaining;
-document.getElementById("reforecast_result").innerText="Adjusted Staff per Interval: "+Math.ceil(adjustedStaff);
+drawCharts(occData,forecastData,actualData)
+
 }
 
-function accuracy(){
-let f=Number(document.getElementById("forecast_value").value);
-let a=Number(document.getElementById("actual_value").value);
-let acc=1-Math.abs(f-a)/a;
-document.getElementById("accuracy_result").innerText="Accuracy: "+(acc*100).toFixed(2)+"%";
-// Chart
-let ctx=document.getElementById("accuracyChart").getContext('2d');
-if(window.accuracyChart) window.accuracyChart.destroy();
-window.accuracyChart=new Chart(ctx,{
-type:'line',
-data:{labels:['Forecast','Actual'],datasets:[{label:'Values',data:[f,a],borderColor:'#2563eb',fill:false, tension:0.3}]},
-options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}}
-});
+
+
+function drawCharts(occ,forecast,actual){
+
+new Chart(document.getElementById("occChart"),{
+
+type:"line",
+
+data:{
+labels:occ.map((_,i)=>"Int "+(i+1)),
+datasets:[{label:"Occupancy %",data:occ}]
 }
 
-function movingAverage(){
-let d1=Number(document.getElementById("d1").value);
-let d2=Number(document.getElementById("d2").value);
-let d3=Number(document.getElementById("d3").value);
-let avg=(d1+d2+d3)/3;
-document.getElementById("ma_result").innerText="Next Forecast: "+avg.toFixed(0);
+})
+
+new Chart(document.getElementById("forecastChart"),{
+
+type:"bar",
+
+data:{
+labels:forecast.map((_,i)=>"Int "+(i+1)),
+datasets:[
+{label:"Forecast",data:forecast},
+{label:"Actual",data:actual}
+]
 }
 
-function shrinkage(){
-let p=Number(document.getElementById("planned").value);
-let u=Number(document.getElementById("unplanned").value);
-let hc=Number(document.getElementById("hc").value);
-let s=(p+u)/hc*100;
-document.getElementById("shrink_result").innerText="Shrinkage: "+s.toFixed(2)+"%";
+})
+
 }
 
-function gap(){
-let r=Number(document.getElementById("required").value);
-let s=Number(document.getElementById("scheduled").value);
-let g=s-r;
-document.getElementById("gap_result").innerText="Staffing Gap: "+g;
-// Chart
-let ctx=document.getElementById("gapChart").getContext('2d');
-if(window.gapChart) window.gapChart.destroy();
-window.gapChart=new Chart(ctx,{
-type:'bar',
-data:{labels:['Staffing Gap'],datasets:[{label:'Gap',data:[g],backgroundColor:g>=0?'#10b981':'#ef4444'}]},
-options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}}
-});
+
+
+function calcShrinkage(){
+
+let sch=document.getElementById("sch").value
+let pl=document.getElementById("pl").value
+let upl=document.getElementById("upl").value
+let woff=document.getElementById("woff").value
+
+let shrink=((Number(pl)+Number(upl)+Number(woff))/sch)*100
+
+document.getElementById("shrinkResult").innerText="Shrinkage: "+shrink.toFixed(2)+"%"
+
 }
+
+
+
+function capacityCalc(){
+
+let calls=document.getElementById("ccalls").value
+let aht=document.getElementById("caht").value
+let shrink=document.getElementById("cshrink").value/100
+
+let workload=(calls*aht)/3600
+
+let fte=workload/0.85
+
+let finalFTE=fte/(1-shrink)
+
+document.getElementById("capacityResult").innerText="Required FTE: "+finalFTE.toFixed(2)
+
+}
+
+
+
+function erlang(){
+
+let calls=document.getElementById("ecalls").value
+let aht=document.getElementById("eaht").value
+
+let workload=(calls*aht)/3600
+
+let agents=Math.ceil(workload/0.85)
+
+document.getElementById("erlangResult").innerText="Agents Required: "+agents
+
+}
+
+
+
+function predictSL(){
+
+let calls=document.getElementById("slcalls").value
+let aht=document.getElementById("slaht").value
+let agents=document.getElementById("slagents").value
+
+let workload=(calls*aht)/3600
+
+let occ=workload/agents
+
+let sl=Math.max(0,100-(occ*100))
+
+document.getElementById("slResult").innerText="Estimated SL: "+sl.toFixed(1)+"%"
+
+}
+
+
+
+function reforecast(){
+
+let f=document.getElementById("rf").value
+let a=document.getElementById("ra").value
+let r=document.getElementById("rr").value
+
+let variance=a/f
+
+let newF=r*variance
+
+document.getElementById("rfResult").innerText="Updated Remaining Forecast: "+Math.round(newF)
+
+}
+
 </script>
 
 </body>
+
 </html>
 
