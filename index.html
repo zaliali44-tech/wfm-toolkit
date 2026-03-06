@@ -20,17 +20,18 @@ h1{
 text-align:center;
 }
 
-.dashboard{
-display:grid;
-grid-template-columns:1fr 1fr;
-gap:20px;
-}
-
 .section{
 background:white;
 padding:20px;
 border-radius:10px;
 box-shadow:0 3px 10px rgba(0,0,0,0.08);
+margin-bottom:25px;
+}
+
+.dashboard{
+display:grid;
+grid-template-columns:1fr 1fr;
+gap:20px;
 }
 
 input{
@@ -72,15 +73,15 @@ border-radius:10px;
 background:#f0f6ff;
 }
 
-canvas{
-margin-top:20px;
-}
-
 .instructions{
 background:#eef6ff;
 padding:12px;
 border-radius:8px;
 margin-bottom:10px;
+}
+
+canvas{
+margin-top:20px;
 }
 
 </style>
@@ -91,32 +92,28 @@ margin-bottom:10px;
 
 <h1>WFM Analytics Toolkit</h1>
 
+
 <div class="section">
 
-<h2>Instructions</h2>
+<h2>Upload or Enter Data</h2>
 
 <div class="instructions">
 
-Manual Input Example
+Manual Example  
+Calls → 120,140,150  
+AHT → 420,430,410  
+Agents → 20,22,23  
+Actual → 110,145,155  
 
-Calls  
-120,140,150
-
-AHT (seconds)  
-420,430,410
-
-Agents  
-20,22,23
-
-Actual Calls (optional for Forecast Accuracy)
-
-110,145,155
-
-Or upload CSV with columns:
-
-Interval | Forecast | Actual | AHT | Agents
+Or download template, fill data, export CSV and upload.
 
 </div>
+
+<a href="wfm_template.csv" download>
+<button>Download Sample Template</button>
+</a>
+
+<br><br>
 
 Calls <input id="calls">
 
@@ -124,13 +121,15 @@ AHT(sec) <input id="aht">
 
 Agents <input id="agents">
 
-Actual Calls <input id="actual">
+Actual <input id="actual">
 
 <button onclick="runAnalysis()">Run Analysis</button>
 
 <div id="dropZone">Drag & Drop CSV File Here</div>
 
 </div>
+
+
 
 <div class="section">
 
@@ -150,7 +149,6 @@ Actual Calls <input id="actual">
 <th>Workload(H)</th>
 <th>Req FTE</th>
 <th>Occupancy</th>
-<th>Utilization</th>
 <th>Forecast Accuracy</th>
 <th>Variance</th>
 <th>Calls/Agent</th>
@@ -170,11 +168,12 @@ Actual Calls <input id="actual">
 </div>
 
 
+
 <div class="dashboard">
 
 <div class="section">
 
-<h2>Shrinkage Calculator</h2>
+<h3>Shrinkage Calculator</h3>
 
 Scheduled HC <input id="sch">
 
@@ -191,9 +190,10 @@ Week Off <input id="woff">
 </div>
 
 
+
 <div class="section">
 
-<h2>Capacity Planning</h2>
+<h3>Capacity Planner</h3>
 
 Forecast Calls <input id="ccalls">
 
@@ -208,15 +208,14 @@ Shrinkage % <input id="cshrink">
 </div>
 
 
+
 <div class="section">
 
-<h2>Erlang C Staffing</h2>
+<h3>Erlang Staffing Estimator</h3>
 
 Calls <input id="ecalls">
 
 AHT(sec) <input id="eaht">
-
-Target SL % <input id="esl">
 
 <button onclick="erlang()">Calculate</button>
 
@@ -225,9 +224,10 @@ Target SL % <input id="esl">
 </div>
 
 
+
 <div class="section">
 
-<h2>Service Level Predictor</h2>
+<h3>Service Level Predictor</h3>
 
 Calls <input id="slcalls">
 
@@ -242,9 +242,10 @@ Agents <input id="slagents">
 </div>
 
 
+
 <div class="section">
 
-<h2>Intraday Reforecast</h2>
+<h3>Intraday Reforecast</h3>
 
 Forecast <input id="rf">
 
@@ -259,6 +260,8 @@ Remaining Forecast <input id="rr">
 </div>
 
 </div>
+
+
 
 <script>
 
@@ -280,12 +283,9 @@ for(let i=0;i<calls.length;i++){
 
 let workload=(calls[i]*aht[i])/3600
 let reqFTE=workload/0.85
-
 let occ=(workload/agents[i])*100
-let util=occ*0.9
 
 let variance=actual[i]-calls[i]
-
 let accuracy=100-(Math.abs(variance)/calls[i]*100)
 
 let cpa=calls[i]/agents[i]
@@ -306,7 +306,6 @@ let row=`
 <td>${workload.toFixed(2)}</td>
 <td>${reqFTE.toFixed(2)}</td>
 <td>${occ.toFixed(1)}%</td>
-<td>${util.toFixed(1)}%</td>
 <td>${accuracy.toFixed(1)}%</td>
 <td>${variance}</td>
 <td>${cpa.toFixed(1)}</td>
@@ -378,9 +377,7 @@ let aht=document.getElementById("caht").value
 let shrink=document.getElementById("cshrink").value/100
 
 let workload=(calls*aht)/3600
-
 let fte=workload/0.85
-
 let finalFTE=fte/(1-shrink)
 
 document.getElementById("capacityResult").innerText="Required FTE: "+finalFTE.toFixed(2)
@@ -395,10 +392,9 @@ let calls=document.getElementById("ecalls").value
 let aht=document.getElementById("eaht").value
 
 let workload=(calls*aht)/3600
-
 let agents=Math.ceil(workload/0.85)
 
-document.getElementById("erlangResult").innerText="Agents Required: "+agents
+document.getElementById("erlangResult").innerText="Estimated Agents Needed: "+agents
 
 }
 
@@ -411,12 +407,11 @@ let aht=document.getElementById("slaht").value
 let agents=document.getElementById("slagents").value
 
 let workload=(calls*aht)/3600
-
 let occ=workload/agents
 
 let sl=Math.max(0,100-(occ*100))
 
-document.getElementById("slResult").innerText="Estimated SL: "+sl.toFixed(1)+"%"
+document.getElementById("slResult").innerText="Estimated Service Level: "+sl.toFixed(1)+"%"
 
 }
 
@@ -429,27 +424,22 @@ let a=document.getElementById("ra").value
 let r=document.getElementById("rr").value
 
 let variance=a/f
-
 let newF=r*variance
 
 document.getElementById("rfResult").innerText="Updated Remaining Forecast: "+Math.round(newF)
 
 }
 
-</script>
 
-</body>
 
-</html>
+const dropZone=document.getElementById("dropZone")
 
-const dropZone = document.getElementById("dropZone")
-
-dropZone.addEventListener("dragover", (e)=>{
+dropZone.addEventListener("dragover",(e)=>{
 e.preventDefault()
 dropZone.style.background="#dbe9ff"
 })
 
-dropZone.addEventListener("dragleave", ()=>{
+dropZone.addEventListener("dragleave",()=>{
 dropZone.style.background="#f0f6ff"
 })
 
@@ -457,7 +447,7 @@ dropZone.addEventListener("drop",(e)=>{
 
 e.preventDefault()
 
-let file = e.dataTransfer.files[0]
+let file=e.dataTransfer.files[0]
 
 Papa.parse(file,{
 
@@ -465,19 +455,21 @@ header:true,
 
 complete:function(results){
 
-let data = results.data
-
 let calls=[]
 let actual=[]
 let aht=[]
 let agents=[]
 
-data.forEach(row=>{
+results.data.forEach(row=>{
+
+if(row.Forecast){
 
 calls.push(Number(row.Forecast))
 actual.push(Number(row.Actual))
 aht.push(Number(row.AHT))
 agents.push(Number(row.Agents))
+
+}
 
 })
 
@@ -493,3 +485,8 @@ alert("File uploaded successfully. Click Run Analysis.")
 })
 
 })
+
+</script>
+
+</body>
+</html>
