@@ -1,266 +1,7 @@
-<!DOCTYPE html>
-<html>
-
-<head>
-
-<title>WFM Analytics Toolkit</title>
-
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
-
-<style>
-
-body{
-font-family:Arial;
-background:#f5f7fb;
-margin:40px;
-}
-
-h1{
-text-align:center;
-}
-
-.dashboard{
-display:grid;
-grid-template-columns:1fr 1fr;
-gap:20px;
-}
-
-.section{
-background:white;
-padding:20px;
-border-radius:10px;
-box-shadow:0 3px 10px rgba(0,0,0,0.08);
-}
-
-input{
-padding:6px;
-margin:4px;
-}
-
-button{
-padding:8px 14px;
-background:#2c7be5;
-color:white;
-border:none;
-border-radius:6px;
-cursor:pointer;
-}
-
-table{
-width:100%;
-margin-top:15px;
-border-collapse:collapse;
-}
-
-th,td{
-border:1px solid #ddd;
-padding:8px;
-text-align:center;
-}
-
-th{
-background:#eef2f7;
-}
-
-#dropZone{
-border:2px dashed #2c7be5;
-padding:25px;
-text-align:center;
-margin-top:15px;
-border-radius:10px;
-background:#f0f6ff;
-}
-
-canvas{
-margin-top:20px;
-}
-
-.instructions{
-background:#eef6ff;
-padding:12px;
-border-radius:8px;
-margin-bottom:10px;
-}
-
-</style>
-
-</head>
-
-<body>
-
-<h1>WFM Analytics Toolkit</h1>
-
-<div class="section">
-
-<h2>Instructions</h2>
-
-<div class="instructions">
-
-Manual Input Example
-
-Calls  
-120,140,150
-
-AHT (seconds)  
-420,430,410
-
-Agents  
-20,22,23
-
-Actual Calls (optional for Forecast Accuracy)
-
-110,145,155
-
-Or upload CSV with columns:
-
-Interval | Forecast | Actual | AHT | Agents
-
-</div>
-
-Calls <input id="calls">
-
-AHT(sec) <input id="aht">
-
-Agents <input id="agents">
-
-Actual Calls <input id="actual">
-
-<button onclick="runAnalysis()">Run Analysis</button>
-
-<div id="dropZone">Drag & Drop CSV File Here</div>
-
-</div>
-
-<div class="section">
-
-<h2>Results</h2>
-
-<table id="results">
-
-<thead>
-
-<tr>
-
-<th>Interval</th>
-<th>Forecast</th>
-<th>Actual</th>
-<th>AHT</th>
-<th>Agents</th>
-<th>Workload(H)</th>
-<th>Req FTE</th>
-<th>Occupancy</th>
-<th>Utilization</th>
-<th>Forecast Accuracy</th>
-<th>Variance</th>
-<th>Calls/Agent</th>
-
-</tr>
-
-</thead>
-
-<tbody></tbody>
-
-</table>
-
-<canvas id="occChart"></canvas>
-
-<canvas id="forecastChart"></canvas>
-
-</div>
-
-
-<div class="dashboard">
-
-<div class="section">
-
-<h2>Shrinkage Calculator</h2>
-
-Scheduled HC <input id="sch">
-
-Planned Leave <input id="pl">
-
-Unplanned Leave <input id="upl">
-
-Week Off <input id="woff">
-
-<button onclick="calcShrinkage()">Calculate</button>
-
-<p id="shrinkResult"></p>
-
-</div>
-
-
-<div class="section">
-
-<h2>Capacity Planning</h2>
-
-Forecast Calls <input id="ccalls">
-
-AHT(sec) <input id="caht">
-
-Shrinkage % <input id="cshrink">
-
-<button onclick="capacityCalc()">Calculate</button>
-
-<p id="capacityResult"></p>
-
-</div>
-
-
-<div class="section">
-
-<h2>Erlang C Staffing</h2>
-
-Calls <input id="ecalls">
-
-AHT(sec) <input id="eaht">
-
-Target SL % <input id="esl">
-
-<button onclick="erlang()">Calculate</button>
-
-<p id="erlangResult"></p>
-
-</div>
-
-
-<div class="section">
-
-<h2>Service Level Predictor</h2>
-
-Calls <input id="slcalls">
-
-AHT <input id="slaht">
-
-Agents <input id="slagents">
-
-<button onclick="predictSL()">Predict</button>
-
-<p id="slResult"></p>
-
-</div>
-
-
-<div class="section">
-
-<h2>Intraday Reforecast</h2>
-
-Forecast <input id="rf">
-
-Actual <input id="ra">
-
-Remaining Forecast <input id="rr">
-
-<button onclick="reforecast()">Update</button>
-
-<p id="rfResult"></p>
-
-</div>
-
-</div>
-
 <script>
+
+let occChart
+let forecastChart
 
 function runAnalysis(){
 
@@ -284,42 +25,38 @@ let reqFTE=workload/0.85
 let occ=(workload/agents[i])*100
 let util=occ*0.9
 
-let variance=actual[i]-calls[i]
-
-let accuracy=100-(Math.abs(variance)/calls[i]*100)
+let variance=(actual[i]||0)-calls[i]
+let accuracy=actual[i]?100-(Math.abs(variance)/calls[i]*100):0
 
 let cpa=calls[i]/agents[i]
 
-occData.push(occ)
+occData.push(Number(occ.toFixed(1)))
 forecastData.push(calls[i])
-actualData.push(actual[i])
+actualData.push(actual[i]||0)
 
-let row=`
-
-<tr>
+let row=`<tr>
 
 <td>${i+1}</td>
 <td>${calls[i]}</td>
-<td>${actual[i]}</td>
+<td>${actual[i]||"-"}</td>
 <td>${aht[i]}</td>
 <td>${agents[i]}</td>
 <td>${workload.toFixed(2)}</td>
 <td>${reqFTE.toFixed(2)}</td>
 <td>${occ.toFixed(1)}%</td>
 <td>${util.toFixed(1)}%</td>
-<td>${accuracy.toFixed(1)}%</td>
+<td>${accuracy?accuracy.toFixed(1)+"%":"-"}</td>
 <td>${variance}</td>
 <td>${cpa.toFixed(1)}</td>
 
-</tr>
-
-`
+</tr>`
 
 tbody.innerHTML+=row
 
 }
 
 drawCharts(occData,forecastData,actualData)
+generateInsights(occData)
 
 }
 
@@ -327,30 +64,113 @@ drawCharts(occData,forecastData,actualData)
 
 function drawCharts(occ,forecast,actual){
 
-new Chart(document.getElementById("occChart"),{
+if(occChart) occChart.destroy()
+if(forecastChart) forecastChart.destroy()
+
+occChart=new Chart(document.getElementById("occChart"),{
 
 type:"line",
 
 data:{
-labels:occ.map((_,i)=>"Int "+(i+1)),
-datasets:[{label:"Occupancy %",data:occ}]
+labels:occ.map((_,i)=>"Interval "+(i+1)),
+datasets:[{
+label:"Occupancy %",
+data:occ,
+borderWidth:2,
+tension:0.3
+}]
+},
+
+options:{
+responsive:true,
+plugins:{legend:{position:"top"}},
+scales:{
+y:{beginAtZero:true,max:120,title:{display:true,text:"Occupancy %"}},
+x:{title:{display:true,text:"Intervals"}}
+}
 }
 
 })
 
-new Chart(document.getElementById("forecastChart"),{
+
+forecastChart=new Chart(document.getElementById("forecastChart"),{
 
 type:"bar",
 
 data:{
-labels:forecast.map((_,i)=>"Int "+(i+1)),
+labels:forecast.map((_,i)=>"Interval "+(i+1)),
 datasets:[
 {label:"Forecast",data:forecast},
 {label:"Actual",data:actual}
 ]
+},
+
+options:{
+responsive:true,
+plugins:{legend:{position:"top"}},
+scales:{
+y:{beginAtZero:true,title:{display:true,text:"Call Volume"}},
+x:{title:{display:true,text:"Intervals"}}
+}
 }
 
 })
+
+}
+
+
+
+function generateInsights(occ){
+
+let avg=occ.reduce((a,b)=>a+b)/occ.length
+
+let insight=""
+
+if(avg>95){
+
+insight="RCA: Severe understaffing detected.<br>"
+insight+="Action: Increase staffing or reduce shrinkage."
+
+}
+
+else if(avg>85){
+
+insight="RCA: High occupancy pressure.<br>"
+insight+="Action: Consider adding buffer agents."
+
+}
+
+else if(avg<60){
+
+insight="RCA: Overstaffing trend detected.<br>"
+insight+="Action: Optimize schedules or reduce staffing."
+
+}
+
+else{
+
+insight="Operations balanced. No major staffing risks."
+
+}
+
+let box=document.getElementById("insightBox")
+
+if(!box){
+
+let div=document.createElement("div")
+div.id="insightBox"
+div.style.marginTop="20px"
+div.style.padding="10px"
+div.style.background="#eef6ff"
+div.style.borderRadius="6px"
+
+document.querySelector(".section:nth-child(2)").appendChild(div)
+
+box=div
+
+}
+
+box.innerHTML="<b>Operational Insight</b><br>"+insight
 
 }
 
@@ -378,9 +198,7 @@ let aht=document.getElementById("caht").value
 let shrink=document.getElementById("cshrink").value/100
 
 let workload=(calls*aht)/3600
-
 let fte=workload/0.85
-
 let finalFTE=fte/(1-shrink)
 
 document.getElementById("capacityResult").innerText="Required FTE: "+finalFTE.toFixed(2)
@@ -394,9 +212,9 @@ function erlang(){
 let calls=document.getElementById("ecalls").value
 let aht=document.getElementById("eaht").value
 
-let workload=(calls*aht)/3600
+let load=(calls*aht)/3600
 
-let agents=Math.ceil(workload/0.85)
+let agents=Math.ceil(load/0.85)
 
 document.getElementById("erlangResult").innerText="Agents Required: "+agents
 
@@ -410,9 +228,8 @@ let calls=document.getElementById("slcalls").value
 let aht=document.getElementById("slaht").value
 let agents=document.getElementById("slagents").value
 
-let workload=(calls*aht)/3600
-
-let occ=workload/agents
+let load=(calls*aht)/3600
+let occ=load/agents
 
 let sl=Math.max(0,100-(occ*100))
 
@@ -429,35 +246,30 @@ let a=document.getElementById("ra").value
 let r=document.getElementById("rr").value
 
 let variance=a/f
-
 let newF=r*variance
 
 document.getElementById("rfResult").innerText="Updated Remaining Forecast: "+Math.round(newF)
 
 }
 
-</script>
 
-</body>
 
-</html>
+const dropZone=document.getElementById("dropZone")
 
-const dropZone = document.getElementById("dropZone")
-
-dropZone.addEventListener("dragover", (e)=>{
+dropZone.addEventListener("dragover",e=>{
 e.preventDefault()
 dropZone.style.background="#dbe9ff"
 })
 
-dropZone.addEventListener("dragleave", ()=>{
+dropZone.addEventListener("dragleave",()=>{
 dropZone.style.background="#f0f6ff"
 })
 
-dropZone.addEventListener("drop",(e)=>{
+dropZone.addEventListener("drop",e=>{
 
 e.preventDefault()
 
-let file = e.dataTransfer.files[0]
+let file=e.dataTransfer.files[0]
 
 Papa.parse(file,{
 
@@ -465,7 +277,7 @@ header:true,
 
 complete:function(results){
 
-let data = results.data
+let data=results.data
 
 let calls=[]
 let actual=[]
@@ -474,10 +286,14 @@ let agents=[]
 
 data.forEach(row=>{
 
+if(row.Forecast){
+
 calls.push(Number(row.Forecast))
 actual.push(Number(row.Actual))
 aht.push(Number(row.AHT))
 agents.push(Number(row.Agents))
+
+}
 
 })
 
@@ -493,3 +309,5 @@ alert("File uploaded successfully. Click Run Analysis.")
 })
 
 })
+
+</script>
