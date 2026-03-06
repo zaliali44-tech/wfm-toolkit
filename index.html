@@ -12,7 +12,7 @@
 
 body{
 font-family:Arial;
-background:#f5f7fb;
+background:#f4f7fb;
 margin:40px;
 }
 
@@ -23,9 +23,9 @@ text-align:center;
 .section{
 background:white;
 padding:20px;
+margin-bottom:25px;
 border-radius:10px;
 box-shadow:0 3px 10px rgba(0,0,0,0.08);
-margin-bottom:25px;
 }
 
 .dashboard{
@@ -36,7 +36,7 @@ gap:20px;
 
 input{
 padding:6px;
-margin:4px;
+margin:5px;
 }
 
 button{
@@ -44,14 +44,14 @@ padding:8px 14px;
 background:#2c7be5;
 color:white;
 border:none;
-border-radius:6px;
+border-radius:5px;
 cursor:pointer;
 }
 
 table{
 width:100%;
-margin-top:15px;
 border-collapse:collapse;
+margin-top:15px;
 }
 
 th,td{
@@ -64,20 +64,20 @@ th{
 background:#eef2f7;
 }
 
-#dropZone{
-border:2px dashed #2c7be5;
-padding:25px;
-text-align:center;
-margin-top:15px;
-border-radius:10px;
-background:#f0f6ff;
-}
-
 .instructions{
 background:#eef6ff;
 padding:12px;
 border-radius:8px;
 margin-bottom:10px;
+}
+
+#dropZone{
+border:2px dashed #2c7be5;
+padding:30px;
+text-align:center;
+margin-top:15px;
+border-radius:10px;
+background:#f0f6ff;
 }
 
 canvas{
@@ -99,13 +99,13 @@ margin-top:20px;
 
 <div class="instructions">
 
-Manual Example  
+Manual example  
 Calls → 120,140,150  
+Actual → 110,145,155  
 AHT → 420,430,410  
 Agents → 20,22,23  
-Actual → 110,145,155  
 
-Or download template, fill data, export CSV and upload.
+Or download template, fill data and upload CSV.
 
 </div>
 
@@ -117,11 +117,11 @@ Or download template, fill data, export CSV and upload.
 
 Calls <input id="calls">
 
+Actual <input id="actual">
+
 AHT(sec) <input id="aht">
 
 Agents <input id="agents">
-
-Actual <input id="actual">
 
 <button onclick="runAnalysis()">Run Analysis</button>
 
@@ -130,10 +130,9 @@ Actual <input id="actual">
 </div>
 
 
-
 <div class="section">
 
-<h2>Results</h2>
+<h2>Interval Results</h2>
 
 <table id="results">
 
@@ -147,7 +146,7 @@ Actual <input id="actual">
 <th>AHT</th>
 <th>Agents</th>
 <th>Workload(H)</th>
-<th>Req FTE</th>
+<th>Required FTE</th>
 <th>Occupancy</th>
 <th>Forecast Accuracy</th>
 <th>Variance</th>
@@ -162,14 +161,13 @@ Actual <input id="actual">
 </table>
 
 <canvas id="occChart"></canvas>
-
 <canvas id="forecastChart"></canvas>
 
 </div>
 
 
-
 <div class="dashboard">
+
 
 <div class="section">
 
@@ -183,12 +181,11 @@ Unplanned Leave <input id="upl">
 
 Week Off <input id="woff">
 
-<button onclick="calcShrinkage()">Calculate</button>
+<button onclick="calcShrink()">Calculate</button>
 
 <p id="shrinkResult"></p>
 
 </div>
-
 
 
 <div class="section">
@@ -201,17 +198,16 @@ AHT(sec) <input id="caht">
 
 Shrinkage % <input id="cshrink">
 
-<button onclick="capacityCalc()">Calculate</button>
+<button onclick="capacity()">Calculate</button>
 
 <p id="capacityResult"></p>
 
 </div>
 
 
-
 <div class="section">
 
-<h3>Erlang Staffing Estimator</h3>
+<h3>Erlang Staffing</h3>
 
 Calls <input id="ecalls">
 
@@ -222,7 +218,6 @@ AHT(sec) <input id="eaht">
 <p id="erlangResult"></p>
 
 </div>
-
 
 
 <div class="section">
@@ -240,7 +235,6 @@ Agents <input id="slagents">
 <p id="slResult"></p>
 
 </div>
-
 
 
 <div class="section">
@@ -262,15 +256,23 @@ Remaining Forecast <input id="rr">
 </div>
 
 
-
 <script>
+
+let occChart
+let forecastChart
+
 
 function runAnalysis(){
 
-let calls=document.getElementById("calls").value.split(",").map(Number)
-let aht=document.getElementById("aht").value.split(",").map(Number)
-let agents=document.getElementById("agents").value.split(",").map(Number)
-let actual=document.getElementById("actual").value.split(",").map(Number)
+let calls=document.getElementById("calls").value.split(",").map(x=>Number(x.trim())).filter(x=>!isNaN(x))
+let actual=document.getElementById("actual").value.split(",").map(x=>Number(x.trim())).filter(x=>!isNaN(x))
+let aht=document.getElementById("aht").value.split(",").map(x=>Number(x.trim())).filter(x=>!isNaN(x))
+let agents=document.getElementById("agents").value.split(",").map(x=>Number(x.trim())).filter(x=>!isNaN(x))
+
+if(calls.length===0){
+alert("Please upload a file or enter values.")
+return
+}
 
 let tbody=document.querySelector("#results tbody")
 tbody.innerHTML=""
@@ -285,14 +287,14 @@ let workload=(calls[i]*aht[i])/3600
 let reqFTE=workload/0.85
 let occ=(workload/agents[i])*100
 
-let variance=actual[i]-calls[i]
+let variance=(actual[i]||0)-calls[i]
 let accuracy=100-(Math.abs(variance)/calls[i]*100)
 
 let cpa=calls[i]/agents[i]
 
 occData.push(occ)
 forecastData.push(calls[i])
-actualData.push(actual[i])
+actualData.push(actual[i]||0)
 
 let row=`
 
@@ -300,7 +302,7 @@ let row=`
 
 <td>${i+1}</td>
 <td>${calls[i]}</td>
-<td>${actual[i]}</td>
+<td>${actual[i]||0}</td>
 <td>${aht[i]}</td>
 <td>${agents[i]}</td>
 <td>${workload.toFixed(2)}</td>
@@ -326,23 +328,26 @@ drawCharts(occData,forecastData,actualData)
 
 function drawCharts(occ,forecast,actual){
 
-new Chart(document.getElementById("occChart"),{
+if(occChart) occChart.destroy()
+if(forecastChart) forecastChart.destroy()
+
+occChart=new Chart(document.getElementById("occChart"),{
 
 type:"line",
 
 data:{
-labels:occ.map((_,i)=>"Int "+(i+1)),
+labels:occ.map((_,i)=>"Interval "+(i+1)),
 datasets:[{label:"Occupancy %",data:occ}]
 }
 
 })
 
-new Chart(document.getElementById("forecastChart"),{
+forecastChart=new Chart(document.getElementById("forecastChart"),{
 
 type:"bar",
 
 data:{
-labels:forecast.map((_,i)=>"Int "+(i+1)),
+labels:forecast.map((_,i)=>"Interval "+(i+1)),
 datasets:[
 {label:"Forecast",data:forecast},
 {label:"Actual",data:actual}
@@ -355,14 +360,14 @@ datasets:[
 
 
 
-function calcShrinkage(){
+function calcShrink(){
 
-let sch=document.getElementById("sch").value
-let pl=document.getElementById("pl").value
-let upl=document.getElementById("upl").value
-let woff=document.getElementById("woff").value
+let sch=Number(document.getElementById("sch").value)
+let pl=Number(document.getElementById("pl").value)
+let upl=Number(document.getElementById("upl").value)
+let woff=Number(document.getElementById("woff").value)
 
-let shrink=((Number(pl)+Number(upl)+Number(woff))/sch)*100
+let shrink=((pl+upl+woff)/sch)*100
 
 document.getElementById("shrinkResult").innerText="Shrinkage: "+shrink.toFixed(2)+"%"
 
@@ -370,7 +375,7 @@ document.getElementById("shrinkResult").innerText="Shrinkage: "+shrink.toFixed(2
 
 
 
-function capacityCalc(){
+function capacity(){
 
 let calls=document.getElementById("ccalls").value
 let aht=document.getElementById("caht").value
@@ -408,7 +413,6 @@ let agents=document.getElementById("slagents").value
 
 let workload=(calls*aht)/3600
 let occ=workload/agents
-
 let sl=Math.max(0,100-(occ*100))
 
 document.getElementById("slResult").innerText="Estimated Service Level: "+sl.toFixed(1)+"%"
@@ -452,6 +456,7 @@ let file=e.dataTransfer.files[0]
 Papa.parse(file,{
 
 header:true,
+skipEmptyLines:true,
 
 complete:function(results){
 
@@ -465,7 +470,7 @@ results.data.forEach(row=>{
 if(row.Forecast){
 
 calls.push(Number(row.Forecast))
-actual.push(Number(row.Actual))
+actual.push(Number(row.Actual)||0)
 aht.push(Number(row.AHT))
 agents.push(Number(row.Agents))
 
@@ -478,7 +483,7 @@ document.getElementById("actual").value=actual.join(",")
 document.getElementById("aht").value=aht.join(",")
 document.getElementById("agents").value=agents.join(",")
 
-alert("File uploaded successfully. Click Run Analysis.")
+alert("File uploaded. Click Run Analysis.")
 
 }
 
