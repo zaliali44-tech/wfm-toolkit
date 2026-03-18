@@ -9,69 +9,153 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
   <style>
+    :root{
+      --bg:#020816;
+      --bg-2:#06132a;
+      --panel:#071326;
+      --panel-2:#09182f;
+      --section-head:#0b1d39;
+      --border:rgba(57,110,201,.28);
+      --border-strong:rgba(72,177,255,.42);
+
+      --text:#f4f8ff;
+      --muted:#a8bfdc;
+      --soft:#7f9bc1;
+
+      --primary:#15e6ff;
+      --primary-dark:#0cc6de;
+      --primary-soft:rgba(21,230,255,.14);
+
+      --green:#36e39c;
+      --green-soft:rgba(54,227,156,.14);
+      --amber:#ffbf47;
+      --amber-soft:rgba(255,191,71,.14);
+      --red:#ff6b7a;
+      --red-soft:rgba(255,107,122,.14);
+
+      --shadow:0 10px 30px rgba(0,0,0,.34);
+      --glow:0 0 0 1px rgba(21,230,255,.12), 0 0 24px rgba(21,230,255,.08);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      font-family: Inter, Arial, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 18% 12%, rgba(32,110,255,.18), transparent 28%),
+        radial-gradient(circle at 78% 10%, rgba(21,230,255,.14), transparent 24%),
+        linear-gradient(180deg, #031022 0%, #020816 44%, #01050f 100%);
+      background-attachment: fixed;
+    }
+
     body {
-      font-family: Arial, sans-serif;
-      background: #f4f7fb;
-      margin: 40px;
-      color: #111827;
+      padding: 6px;
+      overflow-x: hidden;
+    }
+
+    .app {
+      width: 100%;
+      max-width: none;
+      margin: 0;
+      padding: 0 8px 18px;
     }
 
     h1 {
       text-align: center;
-      margin-bottom: 10px;
+      margin: 0 0 10px;
+      font-size: clamp(22px, 3.2vw, 40px);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      color: #ffffff;
+      text-shadow: 0 0 18px rgba(21,230,255,.12);
     }
 
     h2, h3 {
       margin-top: 0;
+      color: #ffffff;
+    }
+
+    .subhead {
+      text-align: center;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.55;
+      max-width: 900px;
+      margin: 0 auto 16px;
     }
 
     .section {
-      background: white;
-      padding: 20px;
-      margin-bottom: 25px;
-      border-radius: 10px;
-      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+      background:
+        linear-gradient(180deg, rgba(8,20,40,.96) 0%, rgba(5,14,28,.96) 100%);
+      padding: 18px;
+      margin-bottom: 18px;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow), var(--glow);
+      backdrop-filter: blur(10px) saturate(1.06);
+      -webkit-backdrop-filter: blur(10px) saturate(1.06);
     }
 
     .dashboard {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 20px;
+      gap: 18px;
     }
 
     .calc-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 20px;
-      margin-top: 20px;
+      gap: 18px;
+      margin-top: 18px;
     }
 
     input, textarea {
-      padding: 8px;
+      padding: 10px 12px;
       margin: 5px;
-      border: 1px solid #cbd5e1;
-      border-radius: 4px;
+      border: 1px solid rgba(95,137,204,.34);
+      border-radius: 10px;
       font-size: 14px;
+      background: rgba(7,17,34,.92);
+      color: #ffffff;
+      outline: none;
+      transition: .16s ease;
+    }
+
+    input:focus, textarea:focus {
+      border-color: rgba(21,230,255,.62);
+      box-shadow: 0 0 0 4px rgba(21,230,255,.09);
     }
 
     textarea {
-      width: calc(100% - 20px);
-      min-height: 80px;
+      width: calc(100% - 10px);
+      min-height: 90px;
       resize: vertical;
+      line-height: 1.45;
     }
 
     button {
-      padding: 8px 14px;
-      background: #2c7be5;
-      color: white;
-      border: none;
-      border-radius: 5px;
+      padding: 10px 14px;
+      background: linear-gradient(180deg, rgba(25,244,255,.95), rgba(9,201,226,.92));
+      color: #03101c;
+      border: 1px solid rgba(21,230,255,.82);
+      border-radius: 999px;
       cursor: pointer;
-      font-size: 14px;
+      font-size: 12px;
+      font-weight: 800;
+      line-height: 1.2;
+      box-shadow: 0 0 0 1px rgba(21,230,255,.18), 0 0 18px rgba(21,230,255,.18);
+      transition: .18s ease;
     }
 
     button:hover {
-      background: #1f6ad0;
+      transform: translateY(-1px);
+      box-shadow: 0 0 0 1px rgba(21,230,255,.3), 0 0 24px rgba(21,230,255,.26);
+      background: linear-gradient(180deg, rgba(45,247,255,.98), rgba(13,216,237,.95));
     }
 
     table {
@@ -79,73 +163,156 @@
       border-collapse: collapse;
       margin-top: 15px;
       font-size: 14px;
+      overflow: hidden;
+      border-radius: 12px;
     }
 
     th, td {
-      border: 1px solid #ddd;
-      padding: 8px;
+      border: 1px solid rgba(95,137,204,.14);
+      padding: 10px 8px;
       text-align: center;
+      color: #eaf3ff;
     }
 
     th {
-      background: #eef2f7;
+      background: rgba(10,23,44,.92);
+      color: #9db8db;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      font-weight: 800;
+    }
+
+    td {
+      background: rgba(7,17,34,.72);
     }
 
     #dropZone {
-      border: 2px dashed #2c7be5;
+      border: 2px dashed rgba(21,230,255,.62);
       padding: 30px;
       text-align: center;
       margin-top: 15px;
-      border-radius: 10px;
-      background: #f0f6ff;
+      border-radius: 14px;
+      background: rgba(8,19,38,.85);
+      color: var(--muted);
       transition: 0.2s ease;
+      box-shadow: inset 0 0 0 1px rgba(21,230,255,.08);
     }
 
     #dropZone.dragover {
-      background: #dbe9ff;
-      border-color: #1f6ad0;
+      background: rgba(12,29,54,.95);
+      border-color: rgba(21,230,255,.95);
+      color: #dffbff;
+      box-shadow: 0 0 18px rgba(21,230,255,.12);
     }
 
     .chart-box {
       position: relative;
       height: 280px;
       margin-top: 20px;
+      background: rgba(7,17,34,.45);
+      border: 1px solid rgba(95,137,204,.14);
+      border-radius: 14px;
+      padding: 10px;
     }
 
     .small-chart-box {
       position: relative;
       height: 260px;
       margin-top: 20px;
+      background: rgba(7,17,34,.45);
+      border: 1px solid rgba(95,137,204,.14);
+      border-radius: 14px;
+      padding: 10px;
     }
 
     .helper {
-      background: #eef6ff;
-      padding: 12px;
-      border-radius: 8px;
-      margin-bottom: 10px;
-      line-height: 1.5;
+      background: rgba(11,25,48,.76);
+      padding: 14px;
+      border-radius: 12px;
+      margin-bottom: 12px;
+      line-height: 1.6;
+      border: 1px solid rgba(95,137,204,.22);
+      color: var(--muted);
     }
 
     .result-box {
       margin-top: 12px;
       padding: 12px;
-      border-radius: 8px;
-      background: #f8fafc;
-      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      background: rgba(11,25,48,.76);
+      border: 1px solid rgba(95,137,204,.22);
       min-height: 24px;
+      color: #eaf3ff;
+      line-height: 1.55;
     }
 
     .insight-box {
       margin-top: 20px;
       padding: 15px;
-      border-radius: 8px;
-      background: #eef6ff;
-      line-height: 1.6;
+      border-radius: 12px;
+      background: rgba(11,25,48,.76);
+      border: 1px solid rgba(95,137,204,.22);
+      line-height: 1.7;
+      color: #eaf3ff;
     }
 
     .muted {
-      color: #475569;
+      color: var(--muted);
       font-size: 13px;
+    }
+
+    .inline-inputs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .inline-inputs input {
+      flex: 1 1 180px;
+      margin: 0;
+      min-width: 140px;
+    }
+
+    .button-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      margin-top: 8px;
+    }
+
+    .tool-title {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: #8eb1dd;
+      font-weight: 800;
+      margin-bottom: 8px;
+    }
+
+    .nested-card {
+      background: rgba(7,17,34,.55);
+      border: 1px solid rgba(95,137,204,.16);
+      border-radius: 14px;
+      padding: 16px;
+    }
+
+    .section h2 {
+      margin-bottom: 12px;
+      font-size: 20px;
+      font-weight: 800;
+    }
+
+    .section h3 {
+      margin-bottom: 12px;
+      font-size: 17px;
+      font-weight: 800;
+    }
+
+    .download-link button {
+      margin: 0;
     }
 
     @media (max-width: 900px) {
@@ -154,202 +321,260 @@
         grid-template-columns: 1fr;
       }
 
+      .inline-inputs {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .inline-inputs input {
+        width: 100%;
+      }
+
       input {
-        width: calc(100% - 20px);
+        width: 100%;
         display: block;
+        margin-left: 0;
+        margin-right: 0;
+      }
+
+      textarea {
+        width: 100%;
+      }
+
+      .app {
+        padding: 0 4px 14px;
       }
     }
   </style>
 </head>
 
 <body>
-
-  <h1>WFM Analytics Toolkit</h1>
-
-  <div class="section">
-    <h2>AI WFM Assistant</h2>
-    <div class="helper">
-      Ask in simple format, for example:<br>
-      <strong>250 calls, AHT 420, shrinkage 30</strong><br>
-      <strong>forecast 500, actual 450</strong><br>
-      <strong>calls 300, AHT 360, agents 18</strong>
+  <div class="app">
+    <h1>WFM Analytics Toolkit</h1>
+    <div class="subhead">
+      Premium workforce analytics, interval diagnostics, forecasting support, and operational calculators styled to match your Stratos environment without changing any calculation logic.
     </div>
 
-    <textarea id="aiPrompt" placeholder="Type your WFM question here..."></textarea>
-    <br>
-    <button onclick="runAIAssistant()">Ask Assistant</button>
-
-    <div id="aiResponse" class="result-box"></div>
-  </div>
-
-  <div class="section">
-    <h2>Upload Data</h2>
-
-    <p>Upload Excel (.xlsx) or CSV file, or enter interval data manually.</p>
-
-    <a href="wfm_template.csv" download>
-      <button type="button">Download Sample Template</button>
-    </a>
-
-    <br><br>
-
-    <input type="file" id="fileInput" accept=".csv,.xlsx,.xls">
-
-    <br><br>
-
-    Calls <input id="calls" placeholder="120,140,150">
-    Actual <input id="actual" placeholder="110,145,155">
-    AHT(sec) <input id="aht" placeholder="420,430,410">
-    Agents <input id="agents" placeholder="20,22,23">
-
-    <button onclick="runAnalysis()">Run Analysis</button>
-
-    <div id="dropZone">Drag & Drop Excel or CSV File</div>
-  </div>
-
-  <div class="section">
-    <h2>Interval Results</h2>
-
-    <table id="results">
-      <thead>
-        <tr>
-          <th>Interval</th>
-          <th>Forecast</th>
-          <th>Actual</th>
-          <th>AHT</th>
-          <th>Agents</th>
-          <th>Workload(H)</th>
-          <th>Required FTE</th>
-          <th>Occupancy</th>
-          <th>Forecast Accuracy</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-
-    <div class="chart-box">
-      <canvas id="forecastChart"></canvas>
-    </div>
-
-    <div class="chart-box">
-      <canvas id="occupancyChart"></canvas>
-    </div>
-
-    <div class="chart-box">
-      <canvas id="intradayChart"></canvas>
-    </div>
-  </div>
-
-  <div class="section">
-    <h2>RCA + Action Plan</h2>
-    <div id="rcaBox" class="insight-box">
-      Upload data and run analysis to see RCA and action plan.
-    </div>
-  </div>
-
-  <div class="section">
-    <h2>WFM Calculators</h2>
-
-    <div class="calc-grid">
-      <div class="section" style="margin-bottom:0;">
-        <h2>Shrinkage Calculator</h2>
-
-        Scheduled HC <input id="sch">
-        Planned Leave <input id="pl">
-        Unplanned Leave <input id="upl">
-        Week Off <input id="woff">
-
-        <button onclick="calcShrinkage()">Calculate</button>
-
-        <div id="shrinkResult" class="result-box"></div>
+    <div class="section">
+      <h2>AI WFM Assistant</h2>
+      <div class="helper">
+        Ask in simple format, for example:<br>
+        <strong>250 calls, AHT 420, shrinkage 30</strong><br>
+        <strong>forecast 500, actual 450</strong><br>
+        <strong>calls 300, AHT 360, agents 18</strong>
       </div>
 
-      <div class="section" style="margin-bottom:0;">
-        <h2>Capacity Planning</h2>
+      <textarea id="aiPrompt" placeholder="Type your WFM question here..."></textarea>
+      <br>
+      <button onclick="runAIAssistant()">Ask Assistant</button>
 
-        Forecast Calls <input id="ccalls">
-        AHT(sec) <input id="caht">
-        Shrinkage % <input id="cshrink">
+      <div id="aiResponse" class="result-box"></div>
+    </div>
 
-        <button onclick="capacityCalc()">Calculate</button>
+    <div class="section">
+      <h2>Upload Data</h2>
 
-        <div id="capacityResult" class="result-box"></div>
+      <p class="muted">Upload Excel (.xlsx) or CSV file, or enter interval data manually.</p>
+
+      <a href="wfm_template.csv" download class="download-link">
+        <button type="button">Download Sample Template</button>
+      </a>
+
+      <br><br>
+
+      <input type="file" id="fileInput" accept=".csv,.xlsx,.xls">
+
+      <br><br>
+
+      <div class="inline-inputs">
+        Calls <input id="calls" placeholder="120,140,150">
+        Actual <input id="actual" placeholder="110,145,155">
+        AHT(sec) <input id="aht" placeholder="420,430,410">
+        Agents <input id="agents" placeholder="20,22,23">
       </div>
 
-      <div class="section" style="margin-bottom:0;">
-        <h2>Erlang C Staffing</h2>
-
-        Calls <input id="ecalls">
-        AHT(sec) <input id="eaht">
-        Target SL % <input id="esl" placeholder="80">
-
-        <button onclick="erlangStaffingCalc()">Calculate</button>
-
-        <div id="erlangStaffingResult" class="result-box"></div>
+      <div class="button-row">
+        <button onclick="runAnalysis()">Run Analysis</button>
       </div>
 
-      <div class="section" style="margin-bottom:0;">
-        <h2>Service Level Predictor</h2>
+      <div id="dropZone">Drag & Drop Excel or CSV File</div>
+    </div>
 
-        Calls <input id="slcalls">
-        AHT <input id="slaht">
-        Agents <input id="slagents">
+    <div class="section">
+      <h2>Interval Results</h2>
 
-        <button onclick="predictSL()">Predict</button>
+      <table id="results">
+        <thead>
+          <tr>
+            <th>Interval</th>
+            <th>Forecast</th>
+            <th>Actual</th>
+            <th>AHT</th>
+            <th>Agents</th>
+            <th>Workload(H)</th>
+            <th>Required FTE</th>
+            <th>Occupancy</th>
+            <th>Forecast Accuracy</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
 
-        <div id="slResult" class="result-box"></div>
+      <div class="chart-box">
+        <canvas id="forecastChart"></canvas>
       </div>
 
-      <div class="section" style="margin-bottom:0;">
-        <h2>Intraday Reforecast</h2>
-
-        Forecast <input id="rf">
-        Actual <input id="ra">
-        Remaining Forecast <input id="rr">
-
-        <button onclick="reforecast()">Update</button>
-
-        <div id="rfResult" class="result-box"></div>
+      <div class="chart-box">
+        <canvas id="occupancyChart"></canvas>
       </div>
 
-      <div class="section" style="margin-bottom:0;">
-        <h2>Forecast Accuracy</h2>
-
-        Forecast <input id="facForecast">
-        Actual <input id="facActual">
-
-        <button onclick="forecastAccuracyCalc()">Calculate</button>
-
-        <div id="forecastAccuracyResult" class="result-box"></div>
+      <div class="chart-box">
+        <canvas id="intradayChart"></canvas>
       </div>
     </div>
-  </div>
 
-  <div class="section">
-    <h2>Erlang Simulation</h2>
-
-    Calls <input id="simCalls">
-    AHT <input id="simAht">
-    Agents <input id="simAgents">
-
-    <button onclick="simulateErlang()">Run Simulation</button>
-
-    <div id="erlangResult" class="result-box"></div>
-
-    <div class="small-chart-box">
-      <canvas id="slCurve"></canvas>
+    <div class="section">
+      <h2>RCA + Action Plan</h2>
+      <div id="rcaBox" class="insight-box">
+        Upload data and run analysis to see RCA and action plan.
+      </div>
     </div>
-  </div>
 
-  <div class="section">
-    <h2>Occupancy Heatmap</h2>
-    <div class="small-chart-box">
-      <canvas id="heatmap"></canvas>
+    <div class="section">
+      <h2>WFM Calculators</h2>
+
+      <div class="calc-grid">
+        <div class="nested-card">
+          <h2>Shrinkage Calculator</h2>
+
+          <div class="inline-inputs">
+            Scheduled HC <input id="sch">
+            Planned Leave <input id="pl">
+            Unplanned Leave <input id="upl">
+            Week Off <input id="woff">
+          </div>
+
+          <div class="button-row">
+            <button onclick="calcShrinkage()">Calculate</button>
+          </div>
+
+          <div id="shrinkResult" class="result-box"></div>
+        </div>
+
+        <div class="nested-card">
+          <h2>Capacity Planning</h2>
+
+          <div class="inline-inputs">
+            Forecast Calls <input id="ccalls">
+            AHT(sec) <input id="caht">
+            Shrinkage % <input id="cshrink">
+          </div>
+
+          <div class="button-row">
+            <button onclick="capacityCalc()">Calculate</button>
+          </div>
+
+          <div id="capacityResult" class="result-box"></div>
+        </div>
+
+        <div class="nested-card">
+          <h2>Erlang C Staffing</h2>
+
+          <div class="inline-inputs">
+            Calls <input id="ecalls">
+            AHT(sec) <input id="eaht">
+            Target SL % <input id="esl" placeholder="80">
+          </div>
+
+          <div class="button-row">
+            <button onclick="erlangStaffingCalc()">Calculate</button>
+          </div>
+
+          <div id="erlangStaffingResult" class="result-box"></div>
+        </div>
+
+        <div class="nested-card">
+          <h2>Service Level Predictor</h2>
+
+          <div class="inline-inputs">
+            Calls <input id="slcalls">
+            AHT <input id="slaht">
+            Agents <input id="slagents">
+          </div>
+
+          <div class="button-row">
+            <button onclick="predictSL()">Predict</button>
+          </div>
+
+          <div id="slResult" class="result-box"></div>
+        </div>
+
+        <div class="nested-card">
+          <h2>Intraday Reforecast</h2>
+
+          <div class="inline-inputs">
+            Forecast <input id="rf">
+            Actual <input id="ra">
+            Remaining Forecast <input id="rr">
+          </div>
+
+          <div class="button-row">
+            <button onclick="reforecast()">Update</button>
+          </div>
+
+          <div id="rfResult" class="result-box"></div>
+        </div>
+
+        <div class="nested-card">
+          <h2>Forecast Accuracy</h2>
+
+          <div class="inline-inputs">
+            Forecast <input id="facForecast">
+            Actual <input id="facActual">
+          </div>
+
+          <div class="button-row">
+            <button onclick="forecastAccuracyCalc()">Calculate</button>
+          </div>
+
+          <div id="forecastAccuracyResult" class="result-box"></div>
+        </div>
+      </div>
     </div>
-    <div class="muted">Higher bars indicate heavier occupancy pressure by interval.</div>
+
+    <div class="section">
+      <h2>Erlang Simulation</h2>
+
+      <div class="inline-inputs">
+        Calls <input id="simCalls">
+        AHT <input id="simAht">
+        Agents <input id="simAgents">
+      </div>
+
+      <div class="button-row">
+        <button onclick="simulateErlang()">Run Simulation</button>
+      </div>
+
+      <div id="erlangResult" class="result-box"></div>
+
+      <div class="small-chart-box">
+        <canvas id="slCurve"></canvas>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Occupancy Heatmap</h2>
+      <div class="small-chart-box">
+        <canvas id="heatmap"></canvas>
+      </div>
+      <div class="muted">Higher bars indicate heavier occupancy pressure by interval.</div>
+    </div>
   </div>
 
   <script>
+    Chart.defaults.color = "#cfe3ff";
+    Chart.defaults.borderColor = "rgba(95,137,204,.18)";
+
     let forecastChart = null;
     let occChart = null;
     let intradayChart = null;
