@@ -83,13 +83,7 @@
     .section-title p { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
 
     .controls, .chips, .button-row, .grid-2, .grid-3, .calc-panels { display: grid; gap: 10px; }
-
-    .topbar,
-    .card,
-    .mini {
-      width: 100%;
-      min-width: 0;
-    }
+    .topbar, .card, .mini { width: 100%; min-width: 0; }
     .controls { grid-template-columns: repeat(4, minmax(0,1fr)); margin-bottom: 12px; }
     .grid-2 { grid-template-columns: repeat(2, minmax(0,1fr)); }
     .grid-3 { grid-template-columns: repeat(3, minmax(0,1fr)); }
@@ -117,10 +111,7 @@
     button.ghost { background: transparent; color: var(--muted); border-color: rgba(94,145,224,.2); box-shadow: none; }
 
     .button-row { grid-template-columns: repeat(auto-fit, minmax(130px, max-content)); align-items: center; }
-    .chips {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      margin: 12px 0;
-    }
+    .chips { grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 12px 0; }
     .chip { border: 1px solid rgba(94,145,224,.18); border-radius: 14px; background: rgba(10, 24, 48, 0.72); color: #dff3ff; padding: 10px 12px; text-align: left; font-size: 12px; font-weight: 700; cursor: pointer; }
     .dropzone { border: 2px dashed rgba(24,229,255,.55); border-radius: 16px; padding: 20px; text-align: center; background: rgba(8, 20, 39, 0.72); color: var(--muted); margin-top: 10px; }
     .dropzone.dragover { background: rgba(10, 28, 54, 0.94); }
@@ -142,19 +133,13 @@
     .calc-panel { display: none; }
     .calc-panel.active { display: block; }
     .result-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
-
-    .test-status {
-      margin-top: 10px;
-      font-size: 12px;
-      color: var(--soft);
-    }
+    .test-status { margin-top: 10px; font-size: 12px; color: var(--soft); }
 
     @media (max-width: 1480px) {
       .shell { width: min(100%, calc(100% - 20px)); }
       .kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); }
       .chips { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     }
-
     @media (max-width: 1200px) {
       .layout, .analysis-grid { grid-template-columns: 1fr; }
       .chips { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -162,15 +147,8 @@
     @media (max-width: 860px) {
       .topbar { flex-direction: column; align-items: flex-start; }
       .status-group { justify-content: flex-start; }
-      .kpis,
-      .controls,
-      .grid-2,
-      .grid-3,
-      .chips { grid-template-columns: 1fr; }
-      .shell {
-        width: min(100%, calc(100% - 12px));
-        padding: 0;
-      }
+      .kpis, .controls, .grid-2, .grid-3, .chips { grid-template-columns: 1fr; }
+      .shell { width: min(100%, calc(100% - 12px)); padding: 0; }
     }
   </style>
 </head>
@@ -352,7 +330,7 @@
                   <div class="grid-3">
                     <div class="field"><label>Calls</label><input id="erlangCalls" type="number" /><div class="helper">Use interval or period call volume.</div></div>
                     <div class="field"><label>AHT (sec)</label><input id="erlangAht" type="number" /><div class="helper">Average handle time for the same load.</div></div>
-                    <div class="field"><label>Target SL %</label><input id="erlangSl" type="number" value="80" /><div class="helper">Your target service level objective.</div></div>
+                    <div class="field"><label>Target SL %</label><input id="erlangSl" type="number" value="80" /><div class="helper">Service level target used to convert into an occupancy guardrail.</div></div>
                   </div>
                   <div class="button-row" style="margin-top:10px;"><button id="erlangBtn">Calculate</button></div>
                   <div class="result" id="erlangResult" style="margin-top:10px;">Estimate required staffing for a target service level.</div>
@@ -409,7 +387,7 @@
   </div>
 
   <script>
-    const state = { rows: [], charts: {}, intervalMinutes: 30 };
+    const state = { rows: [], charts: {}, intervalMinutes: 30, targetOccupancy: 0.85 };
     const $ = (id) => document.getElementById(id);
 
     function parseNumberList(value) {
@@ -462,6 +440,8 @@
 
       const labels = intervals && intervals.length === len ? intervals : makeIntervals(len);
       const rows = [];
+      const intervalHours = state.intervalMinutes / 60;
+      const targetOccupancy = state.targetOccupancy;
 
       for (let i = 0; i < len; i++) {
         const forecast = Number(calls[i] ?? 0);
@@ -469,11 +449,11 @@
         const ahtSec = Number(aht[i] ?? 0);
         const hc = Number(agents[i] ?? 0);
         const workloadHours = (act * ahtSec) / 3600;
-        const productiveHours = hc * (state.intervalMinutes / 60);
-        const reqFte = workloadHours / (state.intervalMinutes / 60);
+        const productiveHours = hc * intervalHours;
+        const reqFte = intervalHours > 0 ? workloadHours / (intervalHours * targetOccupancy) : 0;
         const gap = hc - reqFte;
         const occupancy = productiveHours > 0 ? (workloadHours / productiveHours) * 100 : 0;
-        const accuracy = forecast > 0 ? (1 - Math.abs(act - forecast) / forecast) * 100 : 0;
+        const accuracy = forecast > 0 ? Math.max(0, (1 - Math.abs(act - forecast) / forecast) * 100) : 0;
         const row = { interval: labels[i], forecast, actual: act, aht: ahtSec, agents: hc, workloadHours, reqFte, gap, occupancy, accuracy };
         row.risk = getRiskLabel(row);
         rows.push(row);
@@ -595,82 +575,61 @@
       $('aiResponse').innerHTML = `<strong>WFM Copilot Summary</strong><br>Average forecast accuracy is <strong>${pct(avgAccuracy)}</strong> and average occupancy is <strong>${pct(avgOcc)}</strong>.<br><br><strong>Main risk:</strong> ${high.length ? `${high.length} intervals are high risk.` : 'No high-risk intervals detected.'}<br><strong>Peak strain:</strong> ${htmlEscape(worstOcc.interval)} at ${pct(worstOcc.occupancy)} occupancy.<br><strong>Largest staffing gap:</strong> ${htmlEscape(biggestGap.interval)} with ${num(biggestGap.gap)} net gap.<br><strong>Forecast issue:</strong> ${lowAcc.length} intervals are below 90% accuracy.`;
     }
 
-function runCopilot() {
-  const rawPrompt = $('aiPrompt').value.trim();
-  const prompt = rawPrompt.toLowerCase();
-  const hasRows = !!state.rows.length;
-  const isCalculatorPrompt = prompt.startsWith('analyze this calculator output');
+    function runCopilot() {
+      const rawPrompt = $('aiPrompt').value.trim();
+      const prompt = rawPrompt.toLowerCase();
+      const hasRows = !!state.rows.length;
+      const isCalculatorPrompt = prompt.startsWith('analyze this calculator output');
 
-  if (!hasRows && !rawPrompt) {
-    $('aiResponse').textContent = 'Load interval data first or send a calculator result into the copilot.';
-    return;
-  }
+      if (!hasRows && !rawPrompt) {
+        $('aiResponse').textContent = 'Load interval data first or send a calculator result into the copilot.';
+        return;
+      }
 
-  if (!hasRows && rawPrompt) {
-    $('aiResponse').innerHTML = `<strong>Calculator Output Review</strong><br>I do not have interval data loaded yet, so this response is based on the calculator output you sent.<br><br><strong>Interpretation:</strong><br>${htmlEscape(rawPrompt).replace(/\n/g, '<br>')}<br><br><strong>Recommended next step:</strong> validate this output against interval demand, staffing coverage, and shrinkage assumptions before taking action.`;
-    return;
-  }
+      if (!hasRows && rawPrompt) {
+        $('aiResponse').innerHTML = `<strong>Calculator Output Review</strong><br>I do not have interval data loaded yet, so this response is based on the calculator output you sent.<br><br><strong>Interpretation:</strong><br>${htmlEscape(rawPrompt).replace(/\n/g, '<br>')}<br><br><strong>Recommended next step:</strong> validate this output against interval demand, staffing coverage, and shrinkage assumptions before taking action.`;
+        return;
+      }
 
-  const rows = state.rows;
-  const high = rows.filter(r => r.risk === 'High');
-  const under = rows.filter(r => r.gap < 0);
-  const over = rows.filter(r => r.gap > 1);
-  const lowAcc = rows.filter(r => r.accuracy < 90);
-  const worstRisk = [...rows].sort(
-    (a, b) =>
-      (b.occupancy + (100 - b.accuracy) + Math.max(0, -b.gap) * 12) -
-      (a.occupancy + (100 - a.accuracy) + Math.max(0, -a.gap) * 12)
-  )[0];
-  const peakNeed = Math.max(...rows.map(r => Math.max(0, Math.ceil(r.reqFte - r.agents))));
-  let response = '';
+      const rows = state.rows;
+      const high = rows.filter(r => r.risk === 'High');
+      const under = rows.filter(r => r.gap < 0);
+      const over = rows.filter(r => r.gap > 1);
+      const lowAcc = rows.filter(r => r.accuracy < 90);
+      const worstRisk = [...rows].sort((a, b) => (b.occupancy + (100 - b.accuracy) + Math.max(0, -b.gap) * 12) - (a.occupancy + (100 - a.accuracy) + Math.max(0, -a.gap) * 12))[0];
+      const peakNeed = Math.max(...rows.map(r => Math.max(0, Math.ceil(r.reqFte - r.agents))));
+      let response = '';
 
-  if (isCalculatorPrompt) {
-    const calculatorText = rawPrompt
-      .replace(/^analyze this calculator output and explain the wfm meaning, risk, and recommended action:\s*/i, '')
-      .trim();
+      if (isCalculatorPrompt) {
+        const calculatorText = rawPrompt.replace(/^analyze this calculator output and explain the wfm meaning, risk, and recommended action:\s*/i, '').trim();
+        const avgOcc = average(rows.map(r => r.occupancy));
+        const operationalContext = `${high.length} high-risk intervals, ${under.length} understaffed intervals, average occupancy ${pct(avgOcc)}, and peak strain at ${htmlEscape(worstRisk.interval)}.`;
 
-    const avgOcc = average(rows.map(r => r.occupancy));
-    const operationalContext = `${high.length} high-risk intervals, ${under.length} understaffed intervals, average occupancy ${pct(avgOcc)}, and peak strain at ${htmlEscape(worstRisk.interval)}.`;
+        response = `<strong>Calculator Output Review</strong><br><strong>Input received:</strong><br>${htmlEscape(calculatorText).replace(/\n/g, '<br>')}<br><br><strong>WFM meaning:</strong> This output should be read together with the live operation. Current context shows ${operationalContext}<br><br><strong>Risk view:</strong> ${high.length ? 'The operation already has visible staffing pressure, so this calculator result should be treated as operationally important.' : 'Current interval risk is relatively controlled, so this result looks more like a planning signal than an immediate delivery threat.'}<br><br><strong>Recommended action:</strong> Validate the assumption behind this calculator, compare it against interval demand and staffing gaps, and use ${htmlEscape(worstRisk.interval)} as the first checkpoint for decision making.`;
+      } else if (!prompt || prompt === 'explain' || prompt.includes('explain current data')) {
+        explainCurrentData();
+        return;
+      } else if (prompt.includes('summarize today') || prompt.includes('staffing risk')) {
+        explainCurrentData();
+        return;
+      } else if (prompt.includes('most risky') || prompt.includes('peak risk') || prompt.includes('why')) {
+        response = `<strong>Most risky interval: ${htmlEscape(worstRisk.interval)}</strong><br>It stands out because occupancy is <strong>${pct(worstRisk.occupancy)}</strong>, forecast accuracy is <strong>${pct(worstRisk.accuracy)}</strong>, and the staffing gap is <strong>${num(worstRisk.gap)}</strong>.<br><br><strong>Interpretation:</strong> this interval is likely absorbing a mix of demand pressure and insufficient coverage, so service level risk is highest here.`;
+      } else if (prompt.includes('overstaff')) {
+        response = over.length ? `<strong>Potential overstaffed intervals</strong><br>${over.slice(0, 5).map(r => `${htmlEscape(r.interval)} (${num(r.gap)} above requirement, ${pct(r.occupancy)} occupancy)`).join('<br>')}` : 'No clearly overstaffed intervals found based on current threshold.';
+      } else if (prompt.includes('action') || prompt.includes('rca')) {
+        response = `<strong>RCA</strong><br>${high.length ? `${high.length} high-risk intervals are being driven by a combination of high occupancy, forecast misses, and negative staffing gap.` : 'No major structural risk pattern found.'}<br><br><strong>Action plan</strong><br>1. Protect ${htmlEscape(worstRisk.interval)} and nearby intervals first.<br>2. Shift breaks or offline work out of high-occupancy bands.<br>3. Recover forecast inputs for ${lowAcc.length} low-accuracy intervals.<br>4. Add up to <strong>${peakNeed}</strong> incremental agents during peak if available.`;
+      } else if (prompt.includes('forecast accuracy') || prompt.includes('accuracy')) {
+        response = lowAcc.length ? `<strong>Forecast accuracy driver</strong><br>${lowAcc.length} intervals are below 90% accuracy. Lowest accuracy interval is <strong>${htmlEscape([...rows].sort((a, b) => a.accuracy - b.accuracy)[0].interval)}</strong>. This points to weak demand signal or bad intraday movement, not just staffing.` : 'Forecast accuracy is stable. No interval is below 90% accuracy right now.';
+      } else if (prompt.includes('how many more agents') || prompt.includes('more agents') || prompt.includes('needed in peak')) {
+        response = `<strong>Peak agent need</strong><br>Based on current interval demand, you may need up to <strong>${peakNeed}</strong> additional agents in the worst interval to neutralize the highest staffing gap.`;
+      } else if (prompt.includes('understaff') || prompt.includes('failing')) {
+        response = under.length ? `<strong>Understaffing view</strong><br>${under.length} intervals are understaffed. The heaviest deficit is at <strong>${htmlEscape([...under].sort((a, b) => a.gap - b.gap)[0].interval)}</strong>. This is likely the biggest service level threat.` : 'No understaffed intervals found from the current calculation.';
+      } else {
+        response = `<strong>Best matching analysis</strong><br>I could not map that request to a specific command, so here is the current situation:<br>${high.length} high-risk intervals, ${under.length} understaffed intervals, ${over.length} potentially overstaffed intervals, and ${lowAcc.length} intervals below 90% forecast accuracy.<br><br>Try prompts like <strong>Which interval is most risky?</strong> or <strong>Give me an RCA and action plan</strong>.`;
+      }
 
-    response = `<strong>Calculator Output Review</strong><br>
-      <strong>Input received:</strong><br>${htmlEscape(calculatorText).replace(/\n/g, '<br>')}<br><br>
-      <strong>WFM meaning:</strong> This output should be read together with the live operation. Current context shows ${operationalContext}<br><br>
-      <strong>Risk view:</strong> ${
-        high.length
-          ? 'The operation already has visible staffing pressure, so this calculator result should be treated as operationally important.'
-          : 'Current interval risk is relatively controlled, so this result looks more like a planning signal than an immediate delivery threat.'
-      }<br><br>
-      <strong>Recommended action:</strong> Validate the assumption behind this calculator, compare it against interval demand and staffing gaps, and use ${htmlEscape(worstRisk.interval)} as the first checkpoint for decision making.`;
-  } else if (!prompt || prompt === 'explain' || prompt.includes('explain current data')) {
-    explainCurrentData();
-    return;
-  } else if (prompt.includes('summarize today') || prompt.includes('staffing risk')) {
-    explainCurrentData();
-    return;
-  } else if (prompt.includes('most risky') || prompt.includes('peak risk') || prompt.includes('why')) {
-    response = `<strong>Most risky interval: ${htmlEscape(worstRisk.interval)}</strong><br>It stands out because occupancy is <strong>${pct(worstRisk.occupancy)}</strong>, forecast accuracy is <strong>${pct(worstRisk.accuracy)}</strong>, and the staffing gap is <strong>${num(worstRisk.gap)}</strong>.<br><br><strong>Interpretation:</strong> this interval is likely absorbing a mix of demand pressure and insufficient coverage, so service level risk is highest here.`;
-  } else if (prompt.includes('overstaff')) {
-    response = over.length
-      ? `<strong>Potential overstaffed intervals</strong><br>${over.slice(0, 5).map(r => `${htmlEscape(r.interval)} (${num(r.gap)} above requirement, ${pct(r.occupancy)} occupancy)`).join('<br>')}`
-      : 'No clearly overstaffed intervals found based on current threshold.';
-  } else if (prompt.includes('action') || prompt.includes('rca')) {
-    response = `<strong>RCA</strong><br>${high.length ? `${high.length} high-risk intervals are being driven by a combination of high occupancy, forecast misses, and negative staffing gap.` : 'No major structural risk pattern found.'}<br><br><strong>Action plan</strong><br>1. Protect ${htmlEscape(worstRisk.interval)} and nearby intervals first.<br>2. Shift breaks or offline work out of high-occupancy bands.<br>3. Recover forecast inputs for ${lowAcc.length} low-accuracy intervals.<br>4. Add up to <strong>${peakNeed}</strong> incremental agents during peak if available.`;
-  } else if (prompt.includes('forecast accuracy') || prompt.includes('accuracy')) {
-    response = lowAcc.length
-      ? `<strong>Forecast accuracy driver</strong><br>${lowAcc.length} intervals are below 90% accuracy. Lowest accuracy interval is <strong>${htmlEscape([...rows].sort((a, b) => a.accuracy - b.accuracy)[0].interval)}</strong>. This points to weak demand signal or bad intraday movement, not just staffing.`
-      : 'Forecast accuracy is stable. No interval is below 90% accuracy right now.';
-  } else if (prompt.includes('how many more agents') || prompt.includes('more agents') || prompt.includes('needed in peak')) {
-    response = `<strong>Peak agent need</strong><br>Based on current interval demand, you may need up to <strong>${peakNeed}</strong> additional agents in the worst interval to neutralize the highest staffing gap.`;
-  } else if (prompt.includes('understaff') || prompt.includes('failing')) {
-    response = under.length
-      ? `<strong>Understaffing view</strong><br>${under.length} intervals are understaffed. The heaviest deficit is at <strong>${htmlEscape([...under].sort((a, b) => a.gap - b.gap)[0].interval)}</strong>. This is likely the biggest service level threat.`
-      : 'No understaffed intervals found from the current calculation.';
-  } else {
-    response = `<strong>Best matching analysis</strong><br>I could not map that request to a specific command, so here is the current situation:<br>${high.length} high-risk intervals, ${under.length} understaffed intervals, ${over.length} potentially overstaffed intervals, and ${lowAcc.length} intervals below 90% forecast accuracy.<br><br>Try prompts like <strong>Which interval is most risky?</strong> or <strong>Give me an RCA and action plan</strong>.`;
-  }
-
-  $('aiResponse').innerHTML = response;
-}
+      $('aiResponse').innerHTML = response;
+    }
 
     function runAnalysis(rows) {
       state.rows = rows;
@@ -700,20 +659,24 @@ function runCopilot() {
         $('simResult').textContent = 'Run interval analysis first.';
         return;
       }
-      const ahtPct = Number($('simAht').value || 0);
-      const volPct = Number($('simVol').value || 0);
+      const ahtPct = Number($('simAht').value || 0) / 100;
+      const volPct = Number($('simVol').value || 0) / 100;
       const agentChange = Number($('simAgents').value || 0);
       const shrink = Number($('simShrink').value || 0) / 100;
+      const intervalHours = state.intervalMinutes / 60;
+      const targetOccupancy = state.targetOccupancy;
+
       const scenario = state.rows.map(r => {
-        const newActual = r.actual * (1 + volPct / 100);
-        const newAht = r.aht * (1 + ahtPct / 100);
+        const newActual = r.actual * (1 + volPct);
+        const newAht = r.aht * (1 + ahtPct);
         const effectiveAgents = Math.max(0, (r.agents + agentChange) * (1 - shrink));
         const workloadHours = (newActual * newAht) / 3600;
-        const productiveHours = effectiveAgents * (state.intervalMinutes / 60);
+        const productiveHours = effectiveAgents * intervalHours;
         const occ = productiveHours > 0 ? (workloadHours / productiveHours) * 100 : 0;
-        const reqFte = workloadHours / (state.intervalMinutes / 60);
+        const reqFte = intervalHours > 0 ? workloadHours / (intervalHours * targetOccupancy) : 0;
         return { occ, gap: effectiveAgents - reqFte };
       });
+
       const avgOcc = average(scenario.map(s => s.occ));
       const worstOcc = Math.max(...scenario.map(s => s.occ));
       const netGap = sum(scenario.map(s => s.gap));
@@ -757,9 +720,9 @@ function runCopilot() {
         return;
       }
       const workloadHours = (calls * aht) / 3600;
-      const targetOcc = Math.max(0.55, 0.95 - (targetSl / 200));
-      const requiredAgents = Math.ceil(workloadHours / (0.5 * targetOcc));
-      $('erlangResult').innerHTML = `<strong>Estimated Required Agents:</strong> ${num(requiredAgents, 0)}<br><strong>Assumed Occupancy Guardrail:</strong> ${pct(targetOcc * 100)}<br><strong>Note:</strong> This is a fast planning estimate, not a full Erlang queue engine.`;
+      const targetOcc = Math.max(0.55, Math.min(0.90, 0.98 - (targetSl / 200)));
+      const requiredAgents = Math.ceil(workloadHours / ((state.intervalMinutes / 60) * targetOcc));
+      $('erlangResult').innerHTML = `<strong>Estimated Required Agents:</strong> ${num(requiredAgents, 0)}<br><strong>Assumed Occupancy Guardrail:</strong> ${pct(targetOcc * 100)}<br><strong>Note:</strong> This is a planning estimate using occupancy guardrails, not a full queueing engine.`;
     }
 
     function serviceLevelPredictor() {
@@ -771,10 +734,10 @@ function runCopilot() {
         return;
       }
       const workloadHours = (calls * aht) / 3600;
-      const productiveHours = agents * 0.5;
+      const productiveHours = agents * (state.intervalMinutes / 60);
       const occupancy = productiveHours > 0 ? (workloadHours / productiveHours) * 100 : 0;
-      const serviceLevel = Math.max(0, Math.min(99, 100 - Math.max(0, occupancy - 70) * 1.2));
-      $('slPredictResult').innerHTML = `<strong>Predicted Occupancy:</strong> ${pct(occupancy)}<br><strong>Estimated Service Level:</strong> ${pct(serviceLevel)}<br><strong>Read:</strong> ${occupancy > 90 ? 'High strain. Service level is at risk.' : occupancy > 80 ? 'Manageable but watch peak intervals.' : 'Coverage looks relatively healthy.'}`;
+      const serviceLevel = occupancy <= 75 ? 95 : occupancy <= 85 ? 85 : occupancy <= 95 ? 70 : 50;
+      $('slPredictResult').innerHTML = `<strong>Predicted Occupancy:</strong> ${pct(occupancy)}<br><strong>Estimated Service Level:</strong> ${pct(serviceLevel)}<br><strong>Read:</strong> ${occupancy > 95 ? 'High strain. Service level is at serious risk.' : occupancy > 85 ? 'Manageable but watch peak intervals closely.' : 'Coverage looks relatively healthy.'}`;
     }
 
     function intradayReforecastCalc() {
@@ -798,8 +761,8 @@ function runCopilot() {
         $('forecastAccResult').textContent = 'Enter forecast and actual.';
         return;
       }
-      const accuracy = (1 - Math.abs(actual - forecast) / forecast) * 100;
-      $('forecastAccResult').innerHTML = `<strong>Forecast Accuracy:</strong> ${pct(Math.max(0, accuracy))}<br><strong>Variance:</strong> ${num(actual - forecast, 0)}<br><strong>Read:</strong> ${accuracy >= 95 ? 'Excellent.' : accuracy >= 90 ? 'Good.' : accuracy >= 85 ? 'Needs review.' : 'Material variance. Investigate drivers.'}`;
+      const accuracy = Math.max(0, (1 - Math.abs(actual - forecast) / forecast) * 100);
+      $('forecastAccResult').innerHTML = `<strong>Forecast Accuracy:</strong> ${pct(accuracy)}<br><strong>Variance:</strong> ${num(actual - forecast, 0)}<br><strong>Read:</strong> ${accuracy >= 95 ? 'Excellent.' : accuracy >= 90 ? 'Good.' : accuracy >= 85 ? 'Needs review.' : 'Material variance. Investigate drivers.'}`;
     }
 
     function erlangSimulationCalc() {
@@ -811,9 +774,9 @@ function runCopilot() {
         return;
       }
       const workloadHours = (calls * aht) / 3600;
-      const productiveHours = agents * 0.5;
+      const productiveHours = agents * (state.intervalMinutes / 60);
       const occupancy = productiveHours > 0 ? (workloadHours / productiveHours) * 100 : 0;
-      const reqAgents = Math.ceil(workloadHours / (0.5 * 0.85));
+      const reqAgents = Math.ceil(workloadHours / ((state.intervalMinutes / 60) * state.targetOccupancy));
       const gap = agents - reqAgents;
       $('erlangSimResult').innerHTML = `<strong>Simulated Occupancy:</strong> ${pct(occupancy)}<br><strong>Agents Needed at 85% Occ:</strong> ${num(reqAgents, 0)}<br><strong>Gap:</strong> ${num(gap, 0)}<br><strong>Read:</strong> ${gap < 0 ? 'Scenario is understaffed.' : gap > 0 ? 'Scenario has excess coverage.' : 'Scenario is right on requirement.'}`;
     }
@@ -987,15 +950,12 @@ function runCopilot() {
       const parsed = parseNumberList('1,2\n3\t4');
       assert('parseNumberList handles comma/newline/tab separators', parsed.length === 4 && parsed[2] === 3);
 
-      const rows = buildRows({
-        calls: [100, 120],
-        actual: [110, 100],
-        aht: [300, 300],
-        agents: [20, 20]
-      });
+      const rows = buildRows({ calls: [100, 120], actual: [110, 100], aht: [300, 300], agents: [20, 20] });
       assert('buildRows creates expected number of rows', rows.length === 2);
       assert('buildRows creates interval labels', rows[0].interval === '00:00' && rows[1].interval === '00:30');
+      assert('occupancy remains within realistic test range', rows[0].occupancy > 0 && rows[0].occupancy < 100);
       assert('forecast accuracy calculation stays numeric', Number.isFinite(rows[0].accuracy));
+      assert('required FTE uses target occupancy guardrail', rows[0].reqFte > 0 && rows[0].reqFte < rows[0].agents);
 
       const escaped = htmlEscape('<b>&x</b>');
       assert('htmlEscape escapes angle brackets and ampersands', escaped === '&lt;b&gt;&amp;x&lt;/b&gt;');
