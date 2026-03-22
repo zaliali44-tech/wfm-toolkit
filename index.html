@@ -432,7 +432,8 @@
         const hc = Number(agents[i] ?? 0);
         const workloadHours = (act * ahtSec) / 3600;
         const productiveHours = hc * (state.intervalMinutes / 60);
-        const reqFte = workloadHours / (state.intervalMinutes / 60);
+        const targetOccupancy = 0.85;
+        const reqFte = workloadHours / ((state.intervalMinutes / 60) * targetOccupancy);
         const gap = hc - reqFte;
         const occupancy = productiveHours > 0 ? (workloadHours / productiveHours) * 100 : 0;
         const accuracy = forecast > 0 ? (1 - Math.abs(act - forecast) / forecast) * 100 : 0;
@@ -446,7 +447,7 @@
     function updateKpis(rows) {
       if (!rows.length) return;
       const avgAccuracy = average(rows.map(r => r.accuracy));
-      const avgOcc = average(rows.map(r => r.occupancy));
+      const avgOcc = Math.min(average(rows.map(r => r.occupancy)), 999);
       const worst = [...rows].sort((a, b) => (b.occupancy + (100 - b.accuracy) + Math.max(0, -b.gap) * 12) - (a.occupancy + (100 - a.accuracy) + Math.max(0, -a.gap) * 12))[0];
       const totalGap = sum(rows.map(r => r.gap));
       const highCount = rows.filter(r => r.risk === 'High').length;
