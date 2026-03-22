@@ -595,49 +595,82 @@
       $('aiResponse').innerHTML = `<strong>WFM Copilot Summary</strong><br>Average forecast accuracy is <strong>${pct(avgAccuracy)}</strong> and average occupancy is <strong>${pct(avgOcc)}</strong>.<br><br><strong>Main risk:</strong> ${high.length ? `${high.length} intervals are high risk.` : 'No high-risk intervals detected.'}<br><strong>Peak strain:</strong> ${htmlEscape(worstOcc.interval)} at ${pct(worstOcc.occupancy)} occupancy.<br><strong>Largest staffing gap:</strong> ${htmlEscape(biggestGap.interval)} with ${num(biggestGap.gap)} net gap.<br><strong>Forecast issue:</strong> ${lowAcc.length} intervals are below 90% accuracy.`;
     }
 
-    function runCopilot() {
-      const rawPrompt = $('aiPrompt').value.trim();
-      const prompt = rawPrompt.toLowerCase();
-      const hasRows = !!state.rows.length;
+function runCopilot() {
+  const rawPrompt = $('aiPrompt').value.trim();
+  const prompt = rawPrompt.toLowerCase();
+  const hasRows = !!state.rows.length;
+  const isCalculatorPrompt = prompt.startsWith('analyze this calculator output');
 
-      if (!hasRows && !rawPrompt) {
-        $('aiResponse').textContent = 'Load interval data first or send a calculator result into the copilot.';
-        return;
-      }
-      if (!hasRows && rawPrompt) {
-        $('aiResponse').innerHTML = `<strong>Calculator Output Review</strong><br>I do not have interval data loaded yet, so this response is based on the calculator output you sent.<br><br><strong>Interpretation:</strong><br>${htmlEscape(rawPrompt).replace(/\n/g, '<br>')}<br><br><strong>Recommended next step:</strong> validate this output against interval demand, staffing coverage, and shrinkage assumptions before taking action.`;
-        return;
-      }
+  if (!hasRows && !rawPrompt) {
+    $('aiResponse').textContent = 'Load interval data first or send a calculator result into the copilot.';
+    return;
+  }
 
-      const rows = state.rows;
-      const high = rows.filter(r => r.risk === 'High');
-      const under = rows.filter(r => r.gap < 0);
-      const over = rows.filter(r => r.gap > 1);
-      const lowAcc = rows.filter(r => r.accuracy < 90);
-      const worstRisk = [...rows].sort((a, b) => (b.occupancy + (100 - b.accuracy) + Math.max(0, -b.gap) * 12) - (a.occupancy + (100 - a.accuracy) + Math.max(0, -a.gap) * 12))[0];
-      const peakNeed = Math.max(...rows.map(r => Math.max(0, Math.ceil(r.reqFte - r.agents))));
-      let response = '';
+  if (!hasRows && rawPrompt) {
+    $('aiResponse').innerHTML = `<strong>Calculator Output Review</strong><br>I do not have interval data loaded yet, so this response is based on the calculator output you sent.<br><br><strong>Interpretation:</strong><br>${htmlEscape(rawPrompt).replace(/\n/g, '<br>')}<br><br><strong>Recommended next step:</strong> validate this output against interval demand, staffing coverage, and shrinkage assumptions before taking action.`;
+    return;
+  }
 
-      if (!prompt || prompt.includes('explain') || prompt.includes('summarize')) {
-        explainCurrentData();
-        return;
-      } else if (prompt.includes('most risky') || prompt.includes('peak risk') || prompt.includes('why')) {
-        response = `<strong>Most risky interval: ${htmlEscape(worstRisk.interval)}</strong><br>It stands out because occupancy is <strong>${pct(worstRisk.occupancy)}</strong>, forecast accuracy is <strong>${pct(worstRisk.accuracy)}</strong>, and the staffing gap is <strong>${num(worstRisk.gap)}</strong>.<br><br><strong>Interpretation:</strong> this interval is likely absorbing a mix of demand pressure and insufficient coverage, so service level risk is highest here.`;
-      } else if (prompt.includes('overstaff')) {
-        response = over.length ? `<strong>Potential overstaffed intervals</strong><br>${over.slice(0, 5).map(r => `${htmlEscape(r.interval)} (${num(r.gap)} above requirement, ${pct(r.occupancy)} occupancy)`).join('<br>')}` : 'No clearly overstaffed intervals found based on current threshold.';
-      } else if (prompt.includes('action') || prompt.includes('rca')) {
-        response = `<strong>RCA</strong><br>${high.length ? `${high.length} high-risk intervals are being driven by a combination of high occupancy, forecast misses, and negative staffing gap.` : 'No major structural risk pattern found.'}<br><br><strong>Action plan</strong><br>1. Protect ${htmlEscape(worstRisk.interval)} and nearby intervals first.<br>2. Shift breaks or offline work out of high-occupancy bands.<br>3. Recover forecast inputs for ${lowAcc.length} low-accuracy intervals.<br>4. Add up to <strong>${peakNeed}</strong> incremental agents during peak if available.`;
-      } else if (prompt.includes('forecast accuracy') || prompt.includes('accuracy')) {
-        response = lowAcc.length ? `<strong>Forecast accuracy driver</strong><br>${lowAcc.length} intervals are below 90% accuracy. Lowest accuracy interval is <strong>${htmlEscape([...rows].sort((a, b) => a.accuracy - b.accuracy)[0].interval)}</strong>. This points to weak demand signal or bad intraday movement, not just staffing.` : 'Forecast accuracy is stable. No interval is below 90% accuracy right now.';
-      } else if (prompt.includes('how many more agents') || prompt.includes('more agents') || prompt.includes('needed in peak')) {
-        response = `<strong>Peak agent need</strong><br>Based on current interval demand, you may need up to <strong>${peakNeed}</strong> additional agents in the worst interval to neutralize the highest staffing gap.`;
-      } else if (prompt.includes('understaff') || prompt.includes('failing')) {
-        response = under.length ? `<strong>Understaffing view</strong><br>${under.length} intervals are understaffed. The heaviest deficit is at <strong>${htmlEscape([...under].sort((a, b) => a.gap - b.gap)[0].interval)}</strong>. This is likely the biggest service level threat.` : 'No understaffed intervals found from the current calculation.';
-      } else {
-        response = `<strong>Best matching analysis</strong><br>I could not map that request to a specific command, so here is the current situation:<br>${high.length} high-risk intervals, ${under.length} understaffed intervals, ${over.length} potentially overstaffed intervals, and ${lowAcc.length} intervals below 90% forecast accuracy.<br><br>Try prompts like <strong>Which interval is most risky?</strong> or <strong>Give me an RCA and action plan</strong>.`;
-      }
-      $('aiResponse').innerHTML = response;
-    }
+  const rows = state.rows;
+  const high = rows.filter(r => r.risk === 'High');
+  const under = rows.filter(r => r.gap < 0);
+  const over = rows.filter(r => r.gap > 1);
+  const lowAcc = rows.filter(r => r.accuracy < 90);
+  const worstRisk = [...rows].sort(
+    (a, b) =>
+      (b.occupancy + (100 - b.accuracy) + Math.max(0, -b.gap) * 12) -
+      (a.occupancy + (100 - a.accuracy) + Math.max(0, -a.gap) * 12)
+  )[0];
+  const peakNeed = Math.max(...rows.map(r => Math.max(0, Math.ceil(r.reqFte - r.agents))));
+  let response = '';
+
+  if (isCalculatorPrompt) {
+    const calculatorText = rawPrompt
+      .replace(/^analyze this calculator output and explain the wfm meaning, risk, and recommended action:\s*/i, '')
+      .trim();
+
+    const avgOcc = average(rows.map(r => r.occupancy));
+    const operationalContext = `${high.length} high-risk intervals, ${under.length} understaffed intervals, average occupancy ${pct(avgOcc)}, and peak strain at ${htmlEscape(worstRisk.interval)}.`;
+
+    response = `<strong>Calculator Output Review</strong><br>
+      <strong>Input received:</strong><br>${htmlEscape(calculatorText).replace(/\n/g, '<br>')}<br><br>
+      <strong>WFM meaning:</strong> This output should be read together with the live operation. Current context shows ${operationalContext}<br><br>
+      <strong>Risk view:</strong> ${
+        high.length
+          ? 'The operation already has visible staffing pressure, so this calculator result should be treated as operationally important.'
+          : 'Current interval risk is relatively controlled, so this result looks more like a planning signal than an immediate delivery threat.'
+      }<br><br>
+      <strong>Recommended action:</strong> Validate the assumption behind this calculator, compare it against interval demand and staffing gaps, and use ${htmlEscape(worstRisk.interval)} as the first checkpoint for decision making.`;
+  } else if (!prompt || prompt === 'explain' || prompt.includes('explain current data')) {
+    explainCurrentData();
+    return;
+  } else if (prompt.includes('summarize today') || prompt.includes('staffing risk')) {
+    explainCurrentData();
+    return;
+  } else if (prompt.includes('most risky') || prompt.includes('peak risk') || prompt.includes('why')) {
+    response = `<strong>Most risky interval: ${htmlEscape(worstRisk.interval)}</strong><br>It stands out because occupancy is <strong>${pct(worstRisk.occupancy)}</strong>, forecast accuracy is <strong>${pct(worstRisk.accuracy)}</strong>, and the staffing gap is <strong>${num(worstRisk.gap)}</strong>.<br><br><strong>Interpretation:</strong> this interval is likely absorbing a mix of demand pressure and insufficient coverage, so service level risk is highest here.`;
+  } else if (prompt.includes('overstaff')) {
+    response = over.length
+      ? `<strong>Potential overstaffed intervals</strong><br>${over.slice(0, 5).map(r => `${htmlEscape(r.interval)} (${num(r.gap)} above requirement, ${pct(r.occupancy)} occupancy)`).join('<br>')}`
+      : 'No clearly overstaffed intervals found based on current threshold.';
+  } else if (prompt.includes('action') || prompt.includes('rca')) {
+    response = `<strong>RCA</strong><br>${high.length ? `${high.length} high-risk intervals are being driven by a combination of high occupancy, forecast misses, and negative staffing gap.` : 'No major structural risk pattern found.'}<br><br><strong>Action plan</strong><br>1. Protect ${htmlEscape(worstRisk.interval)} and nearby intervals first.<br>2. Shift breaks or offline work out of high-occupancy bands.<br>3. Recover forecast inputs for ${lowAcc.length} low-accuracy intervals.<br>4. Add up to <strong>${peakNeed}</strong> incremental agents during peak if available.`;
+  } else if (prompt.includes('forecast accuracy') || prompt.includes('accuracy')) {
+    response = lowAcc.length
+      ? `<strong>Forecast accuracy driver</strong><br>${lowAcc.length} intervals are below 90% accuracy. Lowest accuracy interval is <strong>${htmlEscape([...rows].sort((a, b) => a.accuracy - b.accuracy)[0].interval)}</strong>. This points to weak demand signal or bad intraday movement, not just staffing.`
+      : 'Forecast accuracy is stable. No interval is below 90% accuracy right now.';
+  } else if (prompt.includes('how many more agents') || prompt.includes('more agents') || prompt.includes('needed in peak')) {
+    response = `<strong>Peak agent need</strong><br>Based on current interval demand, you may need up to <strong>${peakNeed}</strong> additional agents in the worst interval to neutralize the highest staffing gap.`;
+  } else if (prompt.includes('understaff') || prompt.includes('failing')) {
+    response = under.length
+      ? `<strong>Understaffing view</strong><br>${under.length} intervals are understaffed. The heaviest deficit is at <strong>${htmlEscape([...under].sort((a, b) => a.gap - b.gap)[0].interval)}</strong>. This is likely the biggest service level threat.`
+      : 'No understaffed intervals found from the current calculation.';
+  } else {
+    response = `<strong>Best matching analysis</strong><br>I could not map that request to a specific command, so here is the current situation:<br>${high.length} high-risk intervals, ${under.length} understaffed intervals, ${over.length} potentially overstaffed intervals, and ${lowAcc.length} intervals below 90% forecast accuracy.<br><br>Try prompts like <strong>Which interval is most risky?</strong> or <strong>Give me an RCA and action plan</strong>.`;
+  }
+
+  $('aiResponse').innerHTML = response;
+}
 
     function runAnalysis(rows) {
       state.rows = rows;
