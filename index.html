@@ -1,1190 +1,982 @@
 <!DOCTYPE html>
-<html>
-
+<html lang="en">
 <head>
-  <title>WFM Analytics Toolkit</title>
-
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Stratos WFM Command Center</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-
   <style>
-    :root{
-      --bg:#020816;
-      --bg-2:#06132a;
-      --panel:#071326;
-      --panel-2:#09182f;
-      --section-head:#0b1d39;
-      --border:rgba(57,110,201,.28);
-      --border-strong:rgba(72,177,255,.42);
-
-      --text:#f4f8ff;
-      --muted:#a8bfdc;
-      --soft:#7f9bc1;
-
-      --primary:#15e6ff;
-      --primary-dark:#0cc6de;
-      --primary-soft:rgba(21,230,255,.14);
-
-      --green:#36e39c;
-      --green-soft:rgba(54,227,156,.14);
-      --amber:#ffbf47;
-      --amber-soft:rgba(255,191,71,.14);
-      --red:#ff6b7a;
-      --red-soft:rgba(255,107,122,.14);
-
-      --shadow:0 10px 30px rgba(0,0,0,.34);
-      --glow:0 0 0 1px rgba(21,230,255,.12), 0 0 24px rgba(21,230,255,.08);
+    :root {
+      --bg: #030816;
+      --panel: rgba(8, 18, 37, 0.94);
+      --panel2: rgba(10, 24, 48, 0.9);
+      --line: rgba(96, 145, 224, 0.18);
+      --line-strong: rgba(88, 208, 255, 0.34);
+      --text: #f4f8ff;
+      --muted: #a8bdd8;
+      --soft: #7e99bc;
+      --cyan: #18e5ff;
+      --cyan2: #6fefff;
+      --green: #38e09b;
+      --amber: #ffbf47;
+      --red: #ff6f7f;
+      --shadow: 0 12px 40px rgba(0, 0, 0, 0.34);
+      --radius: 18px;
     }
 
-    * {
-      box-sizing: border-box;
-    }
-
-    html, body {
-      margin: 0;
-      padding: 0;
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
       font-family: Inter, Arial, sans-serif;
       color: var(--text);
       background:
-        radial-gradient(circle at 18% 12%, rgba(32,110,255,.18), transparent 28%),
-        radial-gradient(circle at 78% 10%, rgba(21,230,255,.14), transparent 24%),
-        linear-gradient(180deg, #031022 0%, #020816 44%, #01050f 100%);
-      background-attachment: fixed;
+        radial-gradient(circle at 12% 10%, rgba(79,140,255,.18), transparent 25%),
+        radial-gradient(circle at 80% 12%, rgba(24,229,255,.12), transparent 22%),
+        linear-gradient(180deg, #04101f 0%, #020714 48%, #01040c 100%);
+      min-height: 100vh;
     }
 
-    body {
-      padding: 6px;
-      overflow-x: hidden;
+    .shell { width: min(1500px, calc(100% - 24px)); margin: 12px auto 20px; }
+    .topbar {
+      display: flex; justify-content: space-between; gap: 16px; align-items: center;
+      padding: 18px 22px; border: 1px solid var(--line); border-radius: 22px;
+      background: linear-gradient(180deg, rgba(8, 18, 37, 0.96), rgba(5, 12, 25, 0.96));
+      box-shadow: var(--shadow); backdrop-filter: blur(12px); margin-bottom: 14px;
     }
+    .brand small { display: inline-block; color: var(--cyan2); font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; font-size: 11px; margin-bottom: 6px; }
+    .brand h1 { margin: 0; font-size: clamp(24px, 3vw, 38px); letter-spacing: -0.03em; }
+    .brand p { margin: 8px 0 0; color: var(--muted); max-width: 820px; line-height: 1.55; font-size: 14px; }
+    .status-group { display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-end; }
+    .badge { display: inline-flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 999px; border: 1px solid var(--line-strong); color: #dffbff; background: rgba(9, 25, 49, 0.86); font-size: 12px; font-weight: 700; white-space: nowrap; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 10px rgba(56,224,155,.6); }
 
-    .app {
-      width: 100%;
-      max-width: none;
-      margin: 0;
-      padding: 0 8px 18px;
+    .kpis { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 14px; }
+    .card, .mini {
+      background: linear-gradient(180deg, rgba(9, 20, 39, 0.94), rgba(6, 14, 28, 0.94));
+      border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); padding: 16px;
     }
+    .kpi .label, .mini .t { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; font-weight: 700; margin-bottom: 8px; }
+    .kpi .value { font-size: clamp(22px, 2.4vw, 32px); font-weight: 800; line-height: 1.1; margin-bottom: 5px; }
+    .kpi .sub, .footer-note { color: var(--soft); font-size: 12px; line-height: 1.5; }
 
-    h1 {
-      text-align: center;
-      margin: 0 0 10px;
-      font-size: clamp(22px, 3.2vw, 40px);
-      font-weight: 800;
-      letter-spacing: -0.03em;
-      color: #ffffff;
-      text-shadow: 0 0 18px rgba(21,230,255,.12);
-    }
+    .layout { display: grid; grid-template-columns: 1.55fr 1fr; gap: 14px; margin-bottom: 14px; }
+    .stack { display: grid; gap: 14px; }
+    .section-title { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 14px; }
+    .section-title h2, .section-title h3 { margin: 0; font-size: 18px; }
+    .section-title p { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
 
-    h2, h3 {
-      margin-top: 0;
-      color: #ffffff;
-    }
+    .controls, .chips, .button-row, .grid-2, .grid-3, .calc-panels { display: grid; gap: 10px; }
+    .controls { grid-template-columns: repeat(4, minmax(0,1fr)); margin-bottom: 12px; }
+    .grid-2 { grid-template-columns: repeat(2, minmax(0,1fr)); }
+    .grid-3 { grid-template-columns: repeat(3, minmax(0,1fr)); }
 
-    .subhead {
-      text-align: center;
-      color: var(--muted);
-      font-size: 13px;
-      line-height: 1.55;
-      max-width: 900px;
-      margin: 0 auto 16px;
-    }
+    .field { display: flex; flex-direction: column; gap: 6px; }
+    .field label { color: var(--muted); font-size: 12px; font-weight: 700; letter-spacing: .02em; }
+    .helper { color: var(--soft); font-size: 11px; line-height: 1.45; margin-top: 1px; }
 
-    .section {
-      background:
-        linear-gradient(180deg, rgba(8,20,40,.96) 0%, rgba(5,14,28,.96) 100%);
-      padding: 18px;
-      margin-bottom: 18px;
-      border-radius: 16px;
-      border: 1px solid var(--border);
-      box-shadow: var(--shadow), var(--glow);
-      backdrop-filter: blur(10px) saturate(1.06);
-      -webkit-backdrop-filter: blur(10px) saturate(1.06);
+    input, textarea, select {
+      width: 100%; border: 1px solid rgba(94, 145, 224, 0.22); border-radius: 12px; background: rgba(7, 17, 34, 0.95);
+      color: var(--text); padding: 11px 12px; font-size: 14px; outline: none; transition: .15s ease;
     }
-
-    .dashboard {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 18px;
-    }
-
-    .calc-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 18px;
-      margin-top: 18px;
-    }
-
-    input, textarea {
-      padding: 10px 12px;
-      margin: 5px;
-      border: 1px solid rgba(95,137,204,.34);
-      border-radius: 10px;
-      font-size: 14px;
-      background: rgba(7,17,34,.92);
-      color: #ffffff;
-      outline: none;
-      transition: .16s ease;
-    }
-
-    input:focus, textarea:focus {
-      border-color: rgba(21,230,255,.62);
-      box-shadow: 0 0 0 4px rgba(21,230,255,.09);
-    }
-
-    textarea {
-      width: calc(100% - 10px);
-      min-height: 90px;
-      resize: vertical;
-      line-height: 1.45;
-    }
+    input:focus, textarea:focus, select:focus { border-color: rgba(24,229,255,.6); box-shadow: 0 0 0 4px rgba(24,229,255,.08); }
+    textarea { min-height: 118px; resize: vertical; line-height: 1.5; }
 
     button {
-      padding: 10px 14px;
-      background: linear-gradient(180deg, rgba(25,244,255,.95), rgba(9,201,226,.92));
-      color: #03101c;
-      border: 1px solid rgba(21,230,255,.82);
-      border-radius: 999px;
-      cursor: pointer;
+      border: 1px solid rgba(24,229,255,.5); border-radius: 999px; background: linear-gradient(180deg, rgba(39, 240, 255, 0.98), rgba(9, 205, 230, 0.95));
+      color: #04111b; padding: 10px 14px; font-weight: 800; font-size: 12px; cursor: pointer; transition: .15s ease;
+      box-shadow: 0 0 0 1px rgba(24,229,255,.12), 0 0 20px rgba(24,229,255,.14);
+    }
+    button:hover { transform: translateY(-1px); }
+    button.secondary, .tab-btn, .mini-btn {
+      background: rgba(10, 24, 48, 0.9); color: #dffbff; box-shadow: none; border-color: rgba(94,145,224,.22);
+    }
+    button.ghost { background: transparent; color: var(--muted); border-color: rgba(94,145,224,.2); box-shadow: none; }
+
+    .button-row { grid-template-columns: repeat(auto-fit, minmax(130px, max-content)); align-items: center; }
+    .chips { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); margin: 12px 0; }
+    .chip { border: 1px solid rgba(94,145,224,.18); border-radius: 14px; background: rgba(10, 24, 48, 0.72); color: #dff3ff; padding: 10px 12px; text-align: left; font-size: 12px; font-weight: 700; cursor: pointer; }
+    .dropzone { border: 2px dashed rgba(24,229,255,.55); border-radius: 16px; padding: 20px; text-align: center; background: rgba(8, 20, 39, 0.72); color: var(--muted); margin-top: 10px; }
+    .dropzone.dragover { background: rgba(10, 28, 54, 0.94); }
+    .result { border: 1px solid rgba(94,145,224,.18); background: rgba(9, 21, 40, 0.78); border-radius: 14px; padding: 14px; line-height: 1.6; color: #eef6ff; min-height: 54px; }
+    .analysis-grid { display: grid; grid-template-columns: 1.15fr .85fr; gap: 14px; align-items: start; }
+    .chart-wrap { height: 300px; border: 1px solid rgba(94,145,224,.15); border-radius: 16px; background: rgba(7, 17, 34, 0.62); padding: 10px; }
+
+    table { width: 100%; border-collapse: collapse; font-size: 13px; overflow: hidden; border-radius: 14px; }
+    th, td { border: 1px solid rgba(94,145,224,.14); padding: 9px 8px; text-align: center; }
+    th { background: rgba(10, 24, 48, 0.95); color: #a9c3df; text-transform: uppercase; font-size: 11px; letter-spacing: .06em; }
+    td { background: rgba(7, 17, 34, 0.68); }
+
+    .risk-high { color: var(--red); font-weight: 800; }
+    .risk-med { color: var(--amber); font-weight: 800; }
+    .risk-low { color: var(--green); font-weight: 800; }
+
+    .tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+    .tab-btn.active { border-color: rgba(24,229,255,.55); box-shadow: 0 0 0 1px rgba(24,229,255,.1), 0 0 18px rgba(24,229,255,.12); background: rgba(14, 40, 72, 0.95); }
+    .calc-panel { display: none; }
+    .calc-panel.active { display: block; }
+    .result-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+
+    .test-status {
+      margin-top: 10px;
       font-size: 12px;
-      font-weight: 800;
-      line-height: 1.2;
-      box-shadow: 0 0 0 1px rgba(21,230,255,.18), 0 0 18px rgba(21,230,255,.18);
-      transition: .18s ease;
+      color: var(--soft);
     }
 
-    button:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 0 0 1px rgba(21,230,255,.3), 0 0 24px rgba(21,230,255,.26);
-      background: linear-gradient(180deg, rgba(45,247,255,.98), rgba(13,216,237,.95));
+    @media (max-width: 1200px) {
+      .kpis { grid-template-columns: repeat(3, 1fr); }
+      .layout, .analysis-grid { grid-template-columns: 1fr; }
     }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 15px;
-      font-size: 14px;
-      overflow: hidden;
-      border-radius: 12px;
-    }
-
-    th, td {
-      border: 1px solid rgba(95,137,204,.14);
-      padding: 10px 8px;
-      text-align: center;
-      color: #eaf3ff;
-    }
-
-    th {
-      background: rgba(10,23,44,.92);
-      color: #9db8db;
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: .06em;
-      font-weight: 800;
-    }
-
-    td {
-      background: rgba(7,17,34,.72);
-    }
-
-    #dropZone {
-      border: 2px dashed rgba(21,230,255,.62);
-      padding: 30px;
-      text-align: center;
-      margin-top: 15px;
-      border-radius: 14px;
-      background: rgba(8,19,38,.85);
-      color: var(--muted);
-      transition: 0.2s ease;
-      box-shadow: inset 0 0 0 1px rgba(21,230,255,.08);
-    }
-
-    #dropZone.dragover {
-      background: rgba(12,29,54,.95);
-      border-color: rgba(21,230,255,.95);
-      color: #dffbff;
-      box-shadow: 0 0 18px rgba(21,230,255,.12);
-    }
-
-    .chart-box {
-      position: relative;
-      height: 280px;
-      margin-top: 20px;
-      background: rgba(7,17,34,.45);
-      border: 1px solid rgba(95,137,204,.14);
-      border-radius: 14px;
-      padding: 10px;
-    }
-
-    .small-chart-box {
-      position: relative;
-      height: 260px;
-      margin-top: 20px;
-      background: rgba(7,17,34,.45);
-      border: 1px solid rgba(95,137,204,.14);
-      border-radius: 14px;
-      padding: 10px;
-    }
-
-    .helper {
-      background: rgba(11,25,48,.76);
-      padding: 14px;
-      border-radius: 12px;
-      margin-bottom: 12px;
-      line-height: 1.6;
-      border: 1px solid rgba(95,137,204,.22);
-      color: var(--muted);
-    }
-
-    .result-box {
-      margin-top: 12px;
-      padding: 12px;
-      border-radius: 12px;
-      background: rgba(11,25,48,.76);
-      border: 1px solid rgba(95,137,204,.22);
-      min-height: 24px;
-      color: #eaf3ff;
-      line-height: 1.55;
-    }
-
-    .insight-box {
-      margin-top: 20px;
-      padding: 15px;
-      border-radius: 12px;
-      background: rgba(11,25,48,.76);
-      border: 1px solid rgba(95,137,204,.22);
-      line-height: 1.7;
-      color: #eaf3ff;
-    }
-
-    .muted {
-      color: var(--muted);
-      font-size: 13px;
-    }
-
-    .inline-inputs {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      align-items: center;
-    }
-
-    .inline-inputs input {
-      flex: 1 1 180px;
-      margin: 0;
-      min-width: 140px;
-    }
-
-    .button-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      align-items: center;
-      margin-top: 8px;
-    }
-
-    .tool-title {
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: .08em;
-      color: #8eb1dd;
-      font-weight: 800;
-      margin-bottom: 8px;
-    }
-
-    .nested-card {
-      background: rgba(7,17,34,.55);
-      border: 1px solid rgba(95,137,204,.16);
-      border-radius: 14px;
-      padding: 16px;
-    }
-
-    .section h2 {
-      margin-bottom: 12px;
-      font-size: 20px;
-      font-weight: 800;
-    }
-
-    .section h3 {
-      margin-bottom: 12px;
-      font-size: 17px;
-      font-weight: 800;
-    }
-
-    .download-link button {
-      margin: 0;
-    }
-
-    @media (max-width: 900px) {
-      .dashboard,
-      .calc-grid {
-        grid-template-columns: 1fr;
-      }
-
-      .inline-inputs {
-        flex-direction: column;
-        align-items: stretch;
-      }
-
-      .inline-inputs input {
-        width: 100%;
-      }
-
-      input {
-        width: 100%;
-        display: block;
-        margin-left: 0;
-        margin-right: 0;
-      }
-
-      textarea {
-        width: 100%;
-      }
-
-      .app {
-        padding: 0 4px 14px;
-      }
+    @media (max-width: 860px) {
+      .topbar { flex-direction: column; align-items: flex-start; }
+      .status-group { justify-content: flex-start; }
+      .kpis, .controls, .grid-2, .grid-3 { grid-template-columns: 1fr; }
+      .shell { width: min(100%, calc(100% - 12px)); }
     }
   </style>
 </head>
-
 <body>
-  <div class="app">
-    <h1>WFM Analytics Toolkit</h1>
-    <div class="subhead">
-      Premium workforce analytics, interval diagnostics, forecasting support, and operational calculators styled to match your Stratos environment without changing any calculation logic.
-    </div>
-
-    <div class="section">
-      <h2>AI WFM Assistant</h2>
-      <div class="helper">
-        Ask in simple format, for example:<br>
-        <strong>250 calls, AHT 420, shrinkage 30</strong><br>
-        <strong>forecast 500, actual 450</strong><br>
-        <strong>calls 300, AHT 360, agents 18</strong>
+  <div class="shell">
+    <div class="topbar">
+      <div class="brand">
+        <small>Stratos Workforce Intelligence</small>
+        <h1>WFM Command Center</h1>
+        <p>Premium interval diagnostics, staffing risk detection, quick scenarios, and a smarter WFM copilot that reads your actual data instead of giving generic replies.</p>
       </div>
-
-      <textarea id="aiPrompt" placeholder="Type your WFM question here..."></textarea>
-      <br>
-      <button onclick="runAIAssistant()">Ask Assistant</button>
-
-      <div id="aiResponse" class="result-box"></div>
-    </div>
-
-    <div class="section">
-      <h2>Upload Data</h2>
-
-      <p class="muted">Upload Excel (.xlsx) or CSV file, or enter interval data manually.</p>
-
-      <a href="wfm_template.csv" download class="download-link">
-        <button type="button">Download Sample Template</button>
-      </a>
-
-      <br><br>
-
-      <input type="file" id="fileInput" accept=".csv,.xlsx,.xls">
-
-      <br><br>
-
-      <div class="inline-inputs">
-        Calls <input id="calls" placeholder="120,140,150">
-        Actual <input id="actual" placeholder="110,145,155">
-        AHT(sec) <input id="aht" placeholder="420,430,410">
-        Agents <input id="agents" placeholder="20,22,23">
-      </div>
-
-      <div class="button-row">
-        <button onclick="runAnalysis()">Run Analysis</button>
-      </div>
-
-      <div id="dropZone">Drag & Drop Excel or CSV File</div>
-    </div>
-
-    <div class="section">
-      <h2>Interval Results</h2>
-
-      <table id="results">
-        <thead>
-          <tr>
-            <th>Interval</th>
-            <th>Forecast</th>
-            <th>Actual</th>
-            <th>AHT</th>
-            <th>Agents</th>
-            <th>Workload(H)</th>
-            <th>Required FTE</th>
-            <th>Occupancy</th>
-            <th>Forecast Accuracy</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-
-      <div class="chart-box">
-        <canvas id="forecastChart"></canvas>
-      </div>
-
-      <div class="chart-box">
-        <canvas id="occupancyChart"></canvas>
-      </div>
-
-      <div class="chart-box">
-        <canvas id="intradayChart"></canvas>
+      <div class="status-group">
+        <div class="badge"><span class="dot"></span> Live analysis ready</div>
+        <div class="badge">CSV / XLSX upload</div>
+        <div class="badge">Rule-based AI copilot</div>
       </div>
     </div>
 
-    <div class="section">
-      <h2>RCA + Action Plan</h2>
-      <div id="rcaBox" class="insight-box">
-        Upload data and run analysis to see RCA and action plan.
-      </div>
+    <div class="kpis">
+      <div class="card kpi"><div class="label">Forecast Accuracy</div><div class="value" id="kpiAccuracy">--</div><div class="sub" id="kpiAccuracySub">Upload or run data</div></div>
+      <div class="card kpi"><div class="label">Avg Occupancy</div><div class="value" id="kpiOcc">--</div><div class="sub" id="kpiOccSub">No intervals loaded</div></div>
+      <div class="card kpi"><div class="label">Peak Risk Interval</div><div class="value" id="kpiPeak">--</div><div class="sub" id="kpiPeakSub">Waiting for analysis</div></div>
+      <div class="card kpi"><div class="label">Net Staffing Gap</div><div class="value" id="kpiGap">--</div><div class="sub" id="kpiGapSub">Required vs actual</div></div>
+      <div class="card kpi"><div class="label">Risk Status</div><div class="value" id="kpiRisk">--</div><div class="sub" id="kpiRiskSub">No risk score yet</div></div>
     </div>
 
-    <div class="section">
-      <h2>WFM Calculators</h2>
-
-      <div class="calc-grid">
-        <div class="nested-card">
-          <h2>Shrinkage Calculator</h2>
-
-          <div class="inline-inputs">
-            Scheduled HC <input id="sch">
-            Planned Leave <input id="pl">
-            Unplanned Leave <input id="upl">
-            Week Off <input id="woff">
+    <div class="layout">
+      <div class="stack">
+        <div class="card">
+          <div class="section-title">
+            <div>
+              <h2>Data Intake</h2>
+              <p>Load interval data or paste comma-separated values. Expected columns: interval, forecast/calls, actual, aht, agents.</p>
+            </div>
           </div>
-
+          <div class="controls">
+            <div class="field"><label>Forecast / Calls</label><input id="calls" placeholder="120,140,150,160" /></div>
+            <div class="field"><label>Actual</label><input id="actual" placeholder="118,148,152,173" /></div>
+            <div class="field"><label>AHT (sec)</label><input id="aht" placeholder="420,430,410,445" /></div>
+            <div class="field"><label>Agents</label><input id="agents" placeholder="20,21,19,18" /></div>
+          </div>
           <div class="button-row">
-            <button onclick="calcShrinkage()">Calculate</button>
+            <button id="runBtn">Run Analysis</button>
+            <button class="secondary" id="dummyBtn">Load Dummy Data</button>
+            <button class="secondary" id="downloadTemplateBtn">Download Template</button>
+            <button class="ghost" id="clearBtn">Clear</button>
           </div>
-
-          <div id="shrinkResult" class="result-box"></div>
+          <div class="grid-2" style="margin-top:12px; align-items:end;">
+            <div class="field"><label>Upload CSV / XLSX</label><input type="file" id="fileInput" accept=".csv,.xlsx,.xls" /></div>
+            <div class="result" id="uploadStatus">No file loaded yet.</div>
+          </div>
+          <div class="dropzone" id="dropZone">Drag and drop CSV or Excel file here</div>
         </div>
 
-        <div class="nested-card">
-          <h2>Capacity Planning</h2>
-
-          <div class="inline-inputs">
-            Forecast Calls <input id="ccalls">
-            AHT(sec) <input id="caht">
-            Shrinkage % <input id="cshrink">
+        <div class="card">
+          <div class="section-title">
+            <div><h2>Operations View</h2><p>High-level interval story, staffing strain, and breach concentration.</p></div>
           </div>
-
-          <div class="button-row">
-            <button onclick="capacityCalc()">Calculate</button>
+          <div class="analysis-grid">
+            <div class="stack">
+              <div class="chart-wrap"><canvas id="forecastChart"></canvas></div>
+              <div class="chart-wrap"><canvas id="occupancyChart"></canvas></div>
+            </div>
+            <div class="stack">
+              <div class="result" id="insightPanel">Run analysis to generate interval insights.</div>
+              <div class="result" id="actionPanel">Recommended actions will appear here.</div>
+            </div>
           </div>
-
-          <div id="capacityResult" class="result-box"></div>
         </div>
 
-        <div class="nested-card">
-          <h2>Erlang C Staffing</h2>
-
-          <div class="inline-inputs">
-            Calls <input id="ecalls">
-            AHT(sec) <input id="eaht">
-            Target SL % <input id="esl" placeholder="80">
+        <div class="card">
+          <div class="section-title">
+            <div><h2>Interval Detail</h2><p>Calculated using 30-minute intervals and productive capacity based on current agents.</p></div>
           </div>
-
-          <div class="button-row">
-            <button onclick="erlangStaffingCalc()">Calculate</button>
+          <div style="overflow:auto;">
+            <table id="resultsTable">
+              <thead>
+                <tr>
+                  <th>Interval</th><th>Forecast</th><th>Actual</th><th>AHT</th><th>Agents</th><th>Workload Hrs</th><th>Req FTE</th><th>Gap</th><th>Occ %</th><th>Accuracy %</th><th>Risk</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
           </div>
-
-          <div id="erlangStaffingResult" class="result-box"></div>
-        </div>
-
-        <div class="nested-card">
-          <h2>Service Level Predictor</h2>
-
-          <div class="inline-inputs">
-            Calls <input id="slcalls">
-            AHT <input id="slaht">
-            Agents <input id="slagents">
-          </div>
-
-          <div class="button-row">
-            <button onclick="predictSL()">Predict</button>
-          </div>
-
-          <div id="slResult" class="result-box"></div>
-        </div>
-
-        <div class="nested-card">
-          <h2>Intraday Reforecast</h2>
-
-          <div class="inline-inputs">
-            Forecast <input id="rf">
-            Actual <input id="ra">
-            Remaining Forecast <input id="rr">
-          </div>
-
-          <div class="button-row">
-            <button onclick="reforecast()">Update</button>
-          </div>
-
-          <div id="rfResult" class="result-box"></div>
-        </div>
-
-        <div class="nested-card">
-          <h2>Forecast Accuracy</h2>
-
-          <div class="inline-inputs">
-            Forecast <input id="facForecast">
-            Actual <input id="facActual">
-          </div>
-
-          <div class="button-row">
-            <button onclick="forecastAccuracyCalc()">Calculate</button>
-          </div>
-
-          <div id="forecastAccuracyResult" class="result-box"></div>
         </div>
       </div>
-    </div>
 
-    <div class="section">
-      <h2>Erlang Simulation</h2>
+      <div class="stack">
+        <div class="card">
+          <div class="section-title">
+            <div><h2>AI WFM Copilot</h2><p>It reads loaded interval data, finds drivers, and answers like a WFM analyst instead of a normal chatbot.</p></div>
+          </div>
+          <div class="chips">
+            <button class="chip" data-prompt="Summarize today's staffing risk">Summarize today's staffing risk</button>
+            <button class="chip" data-prompt="Which interval is most risky and why?">Which interval is most risky and why?</button>
+            <button class="chip" data-prompt="Where are we overstaffed?">Where are we overstaffed?</button>
+            <button class="chip" data-prompt="Give me an RCA and action plan">Give me an RCA and action plan</button>
+            <button class="chip" data-prompt="What is driving low forecast accuracy?">What is driving low forecast accuracy?</button>
+            <button class="chip" data-prompt="How many more agents are needed in peak?">How many more agents are needed in peak?</button>
+          </div>
+          <textarea id="aiPrompt" placeholder="Ask something like: Why are we failing? Where is the peak risk? What action should ops take now?"></textarea>
+          <div class="button-row" style="margin-top:10px;">
+            <button id="askAiBtn">Analyze</button>
+            <button class="secondary" id="explainBtn">Explain Current Data</button>
+          </div>
+          <div class="result" id="aiResponse" style="margin-top:10px;">No analysis yet.</div>
+          <div class="test-status" id="testStatus">Self-checks not run yet.</div>
+        </div>
 
-      <div class="inline-inputs">
-        Calls <input id="simCalls">
-        AHT <input id="simAht">
-        Agents <input id="simAgents">
+        <div class="card">
+          <div class="section-title">
+            <div><h3>What-If Simulation</h3><p>Change one lever and instantly see likely staffing and occupancy effect.</p></div>
+          </div>
+          <div class="grid-2">
+            <div class="field"><label>AHT Change %</label><input id="simAht" type="number" placeholder="10" /></div>
+            <div class="field"><label>Volume Change %</label><input id="simVol" type="number" placeholder="5" /></div>
+            <div class="field"><label>Agent Change</label><input id="simAgents" type="number" placeholder="-2" /></div>
+            <div class="field"><label>Shrinkage %</label><input id="simShrink" type="number" placeholder="30" /></div>
+          </div>
+          <div class="button-row" style="margin-top:12px;"><button id="runSimBtn">Run Scenario</button></div>
+          <div class="result" id="simResult">No scenario run yet.</div>
+        </div>
+
+        <div class="card">
+          <div class="section-title">
+            <div><h3>WFM Quick Calculators</h3><p>Now grouped into tabs, with helper guidance, copy/export actions, and the ability to send results into the AI copilot.</p></div>
+          </div>
+          <div class="tabs" id="calcTabs">
+            <button class="tab-btn active" data-tab="tab-core">Core</button>
+            <button class="tab-btn" data-tab="tab-erlang">Erlang &amp; SL</button>
+            <button class="tab-btn" data-tab="tab-intraday">Intraday</button>
+          </div>
+
+          <div class="calc-panels">
+            <div class="calc-panel active" id="tab-core">
+              <div class="grid-2">
+                <div class="mini">
+                  <div class="t">Shrinkage Calculator</div>
+                  <div class="grid-2">
+                    <div class="field"><label>Scheduled HC</label><input id="sch" type="number" /><div class="helper">Total scheduled headcount before absences and week off.</div></div>
+                    <div class="field"><label>Planned Leave</label><input id="pl" type="number" /><div class="helper">Approved leave count included in planning.</div></div>
+                    <div class="field"><label>Unplanned Leave</label><input id="upl" type="number" /><div class="helper">Unexpected absences impacting live delivery.</div></div>
+                    <div class="field"><label>Week Off</label><input id="woff" type="number" /><div class="helper">Weekly off count taken from the same HC base.</div></div>
+                  </div>
+                  <div class="button-row" style="margin-top:10px;"><button id="calcShrinkBtn">Calculate</button></div>
+                  <div class="result" id="shrinkResult" style="margin-top:10px;">Enter HC and leave counts to calculate total shrinkage.</div>
+                  <div class="result-actions"><button class="mini-btn" data-copy-target="shrinkResult">Copy</button><button class="mini-btn" data-export-target="shrinkResult" data-export-name="shrinkage_result.txt">Export</button><button class="mini-btn" data-feed-target="shrinkResult">Send to Copilot</button></div>
+                </div>
+
+                <div class="mini">
+                  <div class="t">Capacity Planning</div>
+                  <div class="grid-3">
+                    <div class="field"><label>Forecast Calls</label><input id="ccalls" type="number" /><div class="helper">Volume expected for the planning period.</div></div>
+                    <div class="field"><label>AHT (sec)</label><input id="caht" type="number" /><div class="helper">Average handling time in seconds.</div></div>
+                    <div class="field"><label>Shrinkage %</label><input id="cshrink" type="number" /><div class="helper">Use your planning shrinkage assumption.</div></div>
+                  </div>
+                  <div class="button-row" style="margin-top:10px;"><button id="capacityBtn">Calculate</button></div>
+                  <div class="result" id="capacityResult" style="margin-top:10px;">Enter forecast workload assumptions to estimate net and gross FTE.</div>
+                  <div class="result-actions"><button class="mini-btn" data-copy-target="capacityResult">Copy</button><button class="mini-btn" data-export-target="capacityResult" data-export-name="capacity_result.txt">Export</button><button class="mini-btn" data-feed-target="capacityResult">Send to Copilot</button></div>
+                </div>
+
+                <div class="mini">
+                  <div class="t">Forecast Accuracy</div>
+                  <div class="grid-2">
+                    <div class="field"><label>Forecast</label><input id="faForecast" type="number" /><div class="helper">Original forecast for the same time period.</div></div>
+                    <div class="field"><label>Actual</label><input id="faActual" type="number" /><div class="helper">Observed actual demand or handled volume.</div></div>
+                  </div>
+                  <div class="button-row" style="margin-top:10px;"><button id="forecastAccBtn">Calculate</button></div>
+                  <div class="result" id="forecastAccResult" style="margin-top:10px;">Quick single-point forecast accuracy check.</div>
+                  <div class="result-actions"><button class="mini-btn" data-copy-target="forecastAccResult">Copy</button><button class="mini-btn" data-export-target="forecastAccResult" data-export-name="forecast_accuracy_result.txt">Export</button><button class="mini-btn" data-feed-target="forecastAccResult">Send to Copilot</button></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="calc-panel" id="tab-erlang">
+              <div class="grid-2">
+                <div class="mini">
+                  <div class="t">Erlang C Staffing</div>
+                  <div class="grid-3">
+                    <div class="field"><label>Calls</label><input id="erlangCalls" type="number" /><div class="helper">Use interval or period call volume.</div></div>
+                    <div class="field"><label>AHT (sec)</label><input id="erlangAht" type="number" /><div class="helper">Average handle time for the same load.</div></div>
+                    <div class="field"><label>Target SL %</label><input id="erlangSl" type="number" value="80" /><div class="helper">Your target service level objective.</div></div>
+                  </div>
+                  <div class="button-row" style="margin-top:10px;"><button id="erlangBtn">Calculate</button></div>
+                  <div class="result" id="erlangResult" style="margin-top:10px;">Estimate required staffing for a target service level.</div>
+                  <div class="result-actions"><button class="mini-btn" data-copy-target="erlangResult">Copy</button><button class="mini-btn" data-export-target="erlangResult" data-export-name="erlang_staffing_result.txt">Export</button><button class="mini-btn" data-feed-target="erlangResult">Send to Copilot</button></div>
+                </div>
+
+                <div class="mini">
+                  <div class="t">Service Level Predictor</div>
+                  <div class="grid-3">
+                    <div class="field"><label>Calls</label><input id="slCalls" type="number" /><div class="helper">Demand volume for the interval or scenario.</div></div>
+                    <div class="field"><label>AHT (sec)</label><input id="slAht" type="number" /><div class="helper">Average handle time used for the scenario.</div></div>
+                    <div class="field"><label>Agents</label><input id="slAgents" type="number" /><div class="helper">Staff available in the same interval.</div></div>
+                  </div>
+                  <div class="button-row" style="margin-top:10px;"><button id="slPredictBtn">Predict</button></div>
+                  <div class="result" id="slPredictResult" style="margin-top:10px;">Estimate occupancy and likely service level from current staffing.</div>
+                  <div class="result-actions"><button class="mini-btn" data-copy-target="slPredictResult">Copy</button><button class="mini-btn" data-export-target="slPredictResult" data-export-name="service_level_predictor_result.txt">Export</button><button class="mini-btn" data-feed-target="slPredictResult">Send to Copilot</button></div>
+                </div>
+
+                <div class="mini" style="grid-column: 1 / -1;">
+                  <div class="t">Erlang Simulation</div>
+                  <div class="grid-3">
+                    <div class="field"><label>Calls</label><input id="simCalls2" type="number" /><div class="helper">Simulated offered calls for the scenario.</div></div>
+                    <div class="field"><label>AHT (sec)</label><input id="simAht2" type="number" /><div class="helper">Scenario handle time assumption.</div></div>
+                    <div class="field"><label>Agents</label><input id="simAgents2" type="number" /><div class="helper">Test staffing level against expected demand.</div></div>
+                  </div>
+                  <div class="button-row" style="margin-top:10px;"><button id="erlangSimBtn">Run Simulation</button></div>
+                  <div class="result" id="erlangSimResult" style="margin-top:10px;">Run a quick staffing pressure simulation for one scenario.</div>
+                  <div class="result-actions"><button class="mini-btn" data-copy-target="erlangSimResult">Copy</button><button class="mini-btn" data-export-target="erlangSimResult" data-export-name="erlang_simulation_result.txt">Export</button><button class="mini-btn" data-feed-target="erlangSimResult">Send to Copilot</button></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="calc-panel" id="tab-intraday">
+              <div class="grid-2">
+                <div class="mini">
+                  <div class="t">Intraday Reforecast</div>
+                  <div class="grid-3">
+                    <div class="field"><label>Original Forecast</label><input id="reforecastBase" type="number" /><div class="helper">Day-level forecast before intraday correction.</div></div>
+                    <div class="field"><label>Actual So Far</label><input id="reforecastActual" type="number" /><div class="helper">Actual volume already received or handled.</div></div>
+                    <div class="field"><label>Remaining Forecast</label><input id="reforecastRemain" type="number" /><div class="helper">Updated expectation for remaining intervals.</div></div>
+                  </div>
+                  <div class="button-row" style="margin-top:10px;"><button id="reforecastBtn">Update</button></div>
+                  <div class="result" id="reforecastResult" style="margin-top:10px;">Recalculate updated day-end forecast using actuals plus remaining projection.</div>
+                  <div class="result-actions"><button class="mini-btn" data-copy-target="reforecastResult">Copy</button><button class="mini-btn" data-export-target="reforecastResult" data-export-name="intraday_reforecast_result.txt">Export</button><button class="mini-btn" data-feed-target="reforecastResult">Send to Copilot</button></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="footer-note">These tools now feel more productized: easier to browse, easier to reuse, and connected to the copilot for follow-up analysis.</div>
+        </div>
       </div>
-
-      <div class="button-row">
-        <button onclick="simulateErlang()">Run Simulation</button>
-      </div>
-
-      <div id="erlangResult" class="result-box"></div>
-
-      <div class="small-chart-box">
-        <canvas id="slCurve"></canvas>
-      </div>
-    </div>
-
-    <div class="section">
-      <h2>Occupancy Heatmap</h2>
-      <div class="small-chart-box">
-        <canvas id="heatmap"></canvas>
-      </div>
-      <div class="muted">Higher bars indicate heavier occupancy pressure by interval.</div>
     </div>
   </div>
 
   <script>
-    Chart.defaults.color = "#cfe3ff";
-    Chart.defaults.borderColor = "rgba(95,137,204,.18)";
+    const state = { rows: [], charts: {}, intervalMinutes: 30 };
+    const $ = (id) => document.getElementById(id);
 
-    let forecastChart = null;
-    let occChart = null;
-    let intradayChart = null;
-    let slCurveChart = null;
-    let heatmapChart = null;
-
-    function parseCommaNumbers(value) {
-      return value
-        .split(",")
+    function parseNumberList(value) {
+      if (!value || !String(value).trim()) return [];
+      return String(value)
+        .split(/[\n,\t]+/)
         .map(v => Number(String(v).trim()))
-        .filter(v => !Number.isNaN(v));
+        .filter(v => Number.isFinite(v));
     }
 
-    function formatPercent(value) {
-      return value.toFixed(1) + "%";
+    function average(arr) { return arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0; }
+    function sum(arr) { return arr.reduce((a, b) => a + b, 0); }
+    function pct(value, digits = 1) { return Number.isFinite(value) ? `${value.toFixed(digits)}%` : '--'; }
+    function num(value, digits = 1) { return Number.isFinite(value) ? value.toFixed(digits) : '--'; }
+
+    function htmlEscape(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
     }
 
-    function safeDestroy(chartRef) {
-      if (chartRef) {
-        chartRef.destroy();
-      }
+    function getRiskLabel(row) {
+      if (row.occupancy >= 95 || row.gap <= -2 || row.accuracy < 85) return 'High';
+      if (row.occupancy >= 85 || row.gap < 0 || row.accuracy < 92) return 'Medium';
+      return 'Low';
     }
 
-    function runAnalysis() {
-      const calls = parseCommaNumbers(document.getElementById("calls").value);
-      const actual = parseCommaNumbers(document.getElementById("actual").value);
-      const aht = parseCommaNumbers(document.getElementById("aht").value);
-      const agents = parseCommaNumbers(document.getElementById("agents").value);
-
-      if (!calls.length || !aht.length || !agents.length) {
-        alert("Please enter or upload Forecast, AHT, and Agents data first.");
-        return;
-      }
-
-      if (calls.length !== aht.length || calls.length !== agents.length) {
-        alert("Forecast, AHT, and Agents must have the same number of intervals.");
-        return;
-      }
-
-      const tbody = document.querySelector("#results tbody");
-      tbody.innerHTML = "";
-
-      const occ = [];
-      const fc = [];
-      const ac = [];
-
-      for (let i = 0; i < calls.length; i++) {
-        const forecastVal = calls[i];
-        const actualVal = actual[i] ?? 0;
-        const ahtVal = aht[i];
-        const agentVal = agents[i];
-
-        if (agentVal <= 0) {
-          alert("Agents cannot be zero or blank.");
-          return;
-        }
-
-        const workload = (forecastVal * ahtVal) / 3600;
-        const fte = workload / 0.85;
-        const occupancy = (workload / agentVal) * 100;
-        const accuracy = actual.length
-          ? Math.max(0, 100 - (Math.abs(actualVal - forecastVal) / Math.max(forecastVal, 1)) * 100)
-          : 0;
-
-        occ.push(Number(occupancy.toFixed(2)));
-        fc.push(forecastVal);
-        ac.push(actualVal);
-
-        const row = `
-          <tr>
-            <td>${i + 1}</td>
-            <td>${forecastVal}</td>
-            <td>${actual.length ? actualVal : "-"}</td>
-            <td>${ahtVal}</td>
-            <td>${agentVal}</td>
-            <td>${workload.toFixed(2)}</td>
-            <td>${fte.toFixed(2)}</td>
-            <td>${formatPercent(occupancy)}</td>
-            <td>${actual.length ? formatPercent(accuracy) : "-"}</td>
-          </tr>
-        `;
-        tbody.innerHTML += row;
-      }
-
-      drawCharts(fc, ac, occ);
-      createHeatmap(occ);
-      generateRCA(fc, ac, occ, aht, agents);
+    function riskClass(risk) {
+      return risk === 'High' ? 'risk-high' : risk === 'Medium' ? 'risk-med' : 'risk-low';
     }
 
-    function baseChartOptions(yTitle) {
+    function makeIntervals(length) {
+      const labels = [];
+      let mins = 0;
+      for (let i = 0; i < length; i++) {
+        const hh = String(Math.floor(mins / 60)).padStart(2, '0');
+        const mm = String(mins % 60).padStart(2, '0');
+        labels.push(`${hh}:${mm}`);
+        mins += state.intervalMinutes;
+      }
+      return labels;
+    }
+
+    function buildRows({ calls, actual, aht, agents, intervals }) {
+      const len = Math.max(calls.length, actual.length, aht.length, agents.length);
+      if (!len) return [];
+
+      const labels = intervals && intervals.length === len ? intervals : makeIntervals(len);
+      const rows = [];
+
+      for (let i = 0; i < len; i++) {
+        const forecast = Number(calls[i] ?? 0);
+        const act = Number(actual[i] ?? forecast);
+        const ahtSec = Number(aht[i] ?? 0);
+        const hc = Number(agents[i] ?? 0);
+        const workloadHours = (act * ahtSec) / 3600;
+        const productiveHours = hc * (state.intervalMinutes / 60);
+        const reqFte = workloadHours / (state.intervalMinutes / 60);
+        const gap = hc - reqFte;
+        const occupancy = productiveHours > 0 ? (workloadHours / productiveHours) * 100 : 0;
+        const accuracy = forecast > 0 ? (1 - Math.abs(act - forecast) / forecast) * 100 : 0;
+        const row = { interval: labels[i], forecast, actual: act, aht: ahtSec, agents: hc, workloadHours, reqFte, gap, occupancy, accuracy };
+        row.risk = getRiskLabel(row);
+        rows.push(row);
+      }
+      return rows;
+    }
+
+    function updateKpis(rows) {
+      if (!rows.length) return;
+      const avgAccuracy = average(rows.map(r => r.accuracy));
+      const avgOcc = average(rows.map(r => r.occupancy));
+      const worst = [...rows].sort((a, b) => (b.occupancy + (100 - b.accuracy) + Math.max(0, -b.gap) * 12) - (a.occupancy + (100 - a.accuracy) + Math.max(0, -a.gap) * 12))[0];
+      const totalGap = sum(rows.map(r => r.gap));
+      const highCount = rows.filter(r => r.risk === 'High').length;
+      const riskStatus = highCount >= 3 ? 'High' : highCount >= 1 ? 'Medium' : 'Low';
+
+      $('kpiAccuracy').textContent = pct(avgAccuracy);
+      $('kpiAccuracySub').textContent = `${rows.filter(r => r.accuracy < 90).length} intervals below 90%`;
+      $('kpiOcc').textContent = pct(avgOcc);
+      $('kpiOccSub').textContent = `${rows.filter(r => r.occupancy > 85).length} intervals above 85% occupancy`;
+      $('kpiPeak').textContent = worst ? worst.interval : '--';
+      $('kpiPeakSub').textContent = worst ? `${pct(worst.occupancy)} occ | ${num(worst.gap)} gap` : 'Waiting for analysis';
+      $('kpiGap').textContent = num(totalGap);
+      $('kpiGapSub').textContent = totalGap < 0 ? 'Net understaffed' : 'Net staffed above requirement';
+      $('kpiRisk').textContent = riskStatus;
+      $('kpiRiskSub').textContent = `${highCount} high-risk intervals detected`;
+    }
+
+    function renderTable(rows) {
+      const tbody = document.querySelector('#resultsTable tbody');
+      tbody.innerHTML = rows.map(r => `
+        <tr>
+          <td>${htmlEscape(r.interval)}</td>
+          <td>${num(r.forecast, 0)}</td>
+          <td>${num(r.actual, 0)}</td>
+          <td>${num(r.aht, 0)}</td>
+          <td>${num(r.agents, 0)}</td>
+          <td>${num(r.workloadHours, 2)}</td>
+          <td>${num(r.reqFte, 2)}</td>
+          <td>${num(r.gap, 2)}</td>
+          <td>${pct(r.occupancy)}</td>
+          <td>${pct(r.accuracy)}</td>
+          <td class="${riskClass(r.risk)}">${r.risk}</td>
+        </tr>
+      `).join('');
+    }
+
+    function destroyChart(key) {
+      if (state.charts[key]) state.charts[key].destroy();
+    }
+
+    function chartOptions() {
       return {
         responsive: true,
         maintainAspectRatio: false,
-        plugins: {
-          legend: {
-            position: "top"
-          }
-        },
+        plugins: { legend: { labels: { color: '#dfefff' } } },
         scales: {
-          x: {
-            title: {
-              display: true,
-              text: "Intervals"
-            }
-          },
-          y: {
-            beginAtZero: true,
-            title: {
-              display: true,
-              text: yTitle
-            }
-          }
+          x: { ticks: { color: '#9cb8d7' }, grid: { color: 'rgba(94,145,224,.08)' } },
+          y: { ticks: { color: '#9cb8d7' }, grid: { color: 'rgba(94,145,224,.08)' } }
         }
       };
     }
 
-    function drawCharts(fc, ac, occ) {
-      safeDestroy(forecastChart);
-      safeDestroy(occChart);
-      safeDestroy(intradayChart);
+    function renderCharts(rows) {
+      const labels = rows.map(r => r.interval);
+      destroyChart('forecast');
+      destroyChart('occupancy');
 
-      const labels = fc.map((_, i) => "Int " + (i + 1));
-
-      forecastChart = new Chart(document.getElementById("forecastChart"), {
-        type: "bar",
+      state.charts.forecast = new Chart($('forecastChart').getContext('2d'), {
+        type: 'line',
         data: {
           labels,
           datasets: [
-            {
-              label: "Forecast",
-              data: fc
-            },
-            {
-              label: "Actual",
-              data: ac
-            }
+            { label: 'Forecast', data: rows.map(r => r.forecast), tension: 0.28, borderWidth: 2 },
+            { label: 'Actual', data: rows.map(r => r.actual), tension: 0.28, borderWidth: 2 }
           ]
         },
-        options: baseChartOptions("Call Volume")
+        options: chartOptions()
       });
 
-      occChart = new Chart(document.getElementById("occupancyChart"), {
-        type: "line",
+      state.charts.occupancy = new Chart($('occupancyChart').getContext('2d'), {
+        type: 'bar',
         data: {
           labels,
           datasets: [
-            {
-              label: "Occupancy %",
-              data: occ,
-              tension: 0.3
-            }
+            { label: 'Occupancy %', data: rows.map(r => r.occupancy), borderWidth: 1 },
+            { label: 'Accuracy %', data: rows.map(r => r.accuracy), type: 'line', tension: 0.28, borderWidth: 2 }
           ]
         },
-        options: {
-          ...baseChartOptions("Occupancy %"),
-          scales: {
-            x: {
-              title: {
-                display: true,
-                text: "Intervals"
-              }
-            },
-            y: {
-              beginAtZero: true,
-              suggestedMax: 120,
-              title: {
-                display: true,
-                text: "Occupancy %"
-              }
-            }
-          }
-        }
-      });
-
-      intradayChart = new Chart(document.getElementById("intradayChart"), {
-        type: "line",
-        data: {
-          labels,
-          datasets: [
-            {
-              label: "Forecast Trend",
-              data: fc,
-              tension: 0.3
-            },
-            {
-              label: "Actual Trend",
-              data: ac,
-              tension: 0.3
-            }
-          ]
-        },
-        options: baseChartOptions("Call Volume")
+        options: chartOptions()
       });
     }
 
-    function generateRCA(fc, ac, occ, aht, agents) {
-      let avgOcc = occ.reduce((sum, v) => sum + v, 0) / occ.length;
-      let avgAccuracy = 0;
+    function updateNarrative(rows) {
+      if (!rows.length) return;
+      const high = rows.filter(r => r.risk === 'High');
+      const under = rows.filter(r => r.gap < 0);
+      const over = rows.filter(r => r.gap > 1);
+      const lowAcc = rows.filter(r => r.accuracy < 90);
+      const worst = [...rows].sort((a, b) => b.occupancy - a.occupancy)[0];
+      const peakNeed = Math.max(...rows.map(r => Math.max(0, Math.ceil(r.reqFte - r.agents))));
 
-      if (ac.some(v => v > 0)) {
-        avgAccuracy = fc.reduce((sum, f, i) => {
-          const actualVal = ac[i] || 0;
-          const acc = Math.max(0, 100 - (Math.abs(actualVal - f) / Math.max(f, 1)) * 100);
-          return sum + acc;
-        }, 0) / fc.length;
-      }
-
-      const maxAht = Math.max(...aht);
-      const minAgents = Math.min(...agents);
-
-      let rca = [];
-      let actions = [];
-
-      if (ac.some(v => v > 0) && avgAccuracy < 90) {
-        rca.push("Forecast accuracy is below 90%, which suggests forecast variance across intervals.");
-        actions.push("Review historical pattern selection and add intraday reforecast checkpoints.");
-      }
-
-      if (avgOcc > 90) {
-        rca.push("Occupancy is running very high, which points to staffing pressure or higher-than-planned workload.");
-        actions.push("Add staffing buffer on peak intervals or reduce shrinkage during critical windows.");
-      } else if (avgOcc < 65) {
-        rca.push("Occupancy is low, which suggests overstaffing or lower workload than planned.");
-        actions.push("Rebalance schedules, reduce excess staffing, or move support to other queues.");
-      }
-
-      if (maxAht > 450) {
-        rca.push("AHT is elevated in at least one interval, which may be affecting service performance.");
-        actions.push("Check process bottlenecks, call drivers, and coaching opportunities for long calls.");
-      }
-
-      if (minAgents < 1) {
-        rca.push("One or more intervals show invalid agent data.");
-        actions.push("Validate uploaded staffing data before decision-making.");
-      }
-
-      if (!rca.length) {
-        rca.push("No major operational risk detected from the uploaded data.");
-        actions.push("Continue monitoring forecast, AHT, and occupancy by interval.");
-      }
-
-      document.getElementById("rcaBox").innerHTML =
-        "<strong>RCA</strong><br>" + rca.join("<br><br>") +
-        "<br><br><strong>Action Plan</strong><br>" + actions.join("<br><br>");
+      $('insightPanel').innerHTML = `<strong>Operational summary</strong><br>${high.length} high-risk intervals detected. Peak strain is at <strong>${htmlEscape(worst.interval)}</strong> with <strong>${pct(worst.occupancy)}</strong> occupancy and a staffing gap of <strong>${num(worst.gap)}</strong>.<br><br><strong>Demand signal:</strong> ${lowAcc.length} intervals are below 90% forecast accuracy.<br><strong>Coverage signal:</strong> ${under.length} intervals are understaffed and ${over.length} intervals look materially overstaffed.`;
+      $('actionPanel').innerHTML = `<strong>Recommended action now</strong><br>1. Protect peak band around <strong>${htmlEscape(worst.interval)}</strong>.<br>2. Rebalance breaks or move support from lower-risk intervals.<br>3. If available, add up to <strong>${peakNeed}</strong> agents during the peak band.<br>4. Review forecast inputs where accuracy is below 90%, especially around high AHT intervals.`;
     }
 
-    function erlangCProbabilityWait(traffic, agents) {
-      if (agents <= traffic) return 1;
+    function explainCurrentData() {
+      if (!state.rows.length) {
+        $('aiResponse').textContent = 'Load or run interval data first so the copilot can analyze actual numbers.';
+        return;
+      }
+      const rows = state.rows;
+      const high = rows.filter(r => r.risk === 'High');
+      const lowAcc = rows.filter(r => r.accuracy < 90);
+      const worstOcc = [...rows].sort((a, b) => b.occupancy - a.occupancy)[0];
+      const biggestGap = [...rows].sort((a, b) => a.gap - b.gap)[0];
+      const avgAccuracy = average(rows.map(r => r.accuracy));
+      const avgOcc = average(rows.map(r => r.occupancy));
+      $('aiResponse').innerHTML = `<strong>WFM Copilot Summary</strong><br>Average forecast accuracy is <strong>${pct(avgAccuracy)}</strong> and average occupancy is <strong>${pct(avgOcc)}</strong>.<br><br><strong>Main risk:</strong> ${high.length ? `${high.length} intervals are high risk.` : 'No high-risk intervals detected.'}<br><strong>Peak strain:</strong> ${htmlEscape(worstOcc.interval)} at ${pct(worstOcc.occupancy)} occupancy.<br><strong>Largest staffing gap:</strong> ${htmlEscape(biggestGap.interval)} with ${num(biggestGap.gap)} net gap.<br><strong>Forecast issue:</strong> ${lowAcc.length} intervals are below 90% accuracy.`;
+    }
 
-      let sum = 0;
-      for (let k = 0; k < agents; k++) {
-        sum += Math.pow(traffic, k) / factorial(k);
+    function runCopilot() {
+      const rawPrompt = $('aiPrompt').value.trim();
+      const prompt = rawPrompt.toLowerCase();
+      const hasRows = !!state.rows.length;
+
+      if (!hasRows && !rawPrompt) {
+        $('aiResponse').textContent = 'Load interval data first or send a calculator result into the copilot.';
+        return;
+      }
+      if (!hasRows && rawPrompt) {
+        $('aiResponse').innerHTML = `<strong>Calculator Output Review</strong><br>I do not have interval data loaded yet, so this response is based on the calculator output you sent.<br><br><strong>Interpretation:</strong><br>${htmlEscape(rawPrompt).replace(/\n/g, '<br>')}<br><br><strong>Recommended next step:</strong> validate this output against interval demand, staffing coverage, and shrinkage assumptions before taking action.`;
+        return;
       }
 
-      const top = (Math.pow(traffic, agents) / factorial(agents)) * (agents / (agents - traffic));
-      return top / (sum + top);
+      const rows = state.rows;
+      const high = rows.filter(r => r.risk === 'High');
+      const under = rows.filter(r => r.gap < 0);
+      const over = rows.filter(r => r.gap > 1);
+      const lowAcc = rows.filter(r => r.accuracy < 90);
+      const worstRisk = [...rows].sort((a, b) => (b.occupancy + (100 - b.accuracy) + Math.max(0, -b.gap) * 12) - (a.occupancy + (100 - a.accuracy) + Math.max(0, -a.gap) * 12))[0];
+      const peakNeed = Math.max(...rows.map(r => Math.max(0, Math.ceil(r.reqFte - r.agents))));
+      let response = '';
+
+      if (!prompt || prompt.includes('explain') || prompt.includes('summarize')) {
+        explainCurrentData();
+        return;
+      } else if (prompt.includes('most risky') || prompt.includes('peak risk') || prompt.includes('why')) {
+        response = `<strong>Most risky interval: ${htmlEscape(worstRisk.interval)}</strong><br>It stands out because occupancy is <strong>${pct(worstRisk.occupancy)}</strong>, forecast accuracy is <strong>${pct(worstRisk.accuracy)}</strong>, and the staffing gap is <strong>${num(worstRisk.gap)}</strong>.<br><br><strong>Interpretation:</strong> this interval is likely absorbing a mix of demand pressure and insufficient coverage, so service level risk is highest here.`;
+      } else if (prompt.includes('overstaff')) {
+        response = over.length ? `<strong>Potential overstaffed intervals</strong><br>${over.slice(0, 5).map(r => `${htmlEscape(r.interval)} (${num(r.gap)} above requirement, ${pct(r.occupancy)} occupancy)`).join('<br>')}` : 'No clearly overstaffed intervals found based on current threshold.';
+      } else if (prompt.includes('action') || prompt.includes('rca')) {
+        response = `<strong>RCA</strong><br>${high.length ? `${high.length} high-risk intervals are being driven by a combination of high occupancy, forecast misses, and negative staffing gap.` : 'No major structural risk pattern found.'}<br><br><strong>Action plan</strong><br>1. Protect ${htmlEscape(worstRisk.interval)} and nearby intervals first.<br>2. Shift breaks or offline work out of high-occupancy bands.<br>3. Recover forecast inputs for ${lowAcc.length} low-accuracy intervals.<br>4. Add up to <strong>${peakNeed}</strong> incremental agents during peak if available.`;
+      } else if (prompt.includes('forecast accuracy') || prompt.includes('accuracy')) {
+        response = lowAcc.length ? `<strong>Forecast accuracy driver</strong><br>${lowAcc.length} intervals are below 90% accuracy. Lowest accuracy interval is <strong>${htmlEscape([...rows].sort((a, b) => a.accuracy - b.accuracy)[0].interval)}</strong>. This points to weak demand signal or bad intraday movement, not just staffing.` : 'Forecast accuracy is stable. No interval is below 90% accuracy right now.';
+      } else if (prompt.includes('how many more agents') || prompt.includes('more agents') || prompt.includes('needed in peak')) {
+        response = `<strong>Peak agent need</strong><br>Based on current interval demand, you may need up to <strong>${peakNeed}</strong> additional agents in the worst interval to neutralize the highest staffing gap.`;
+      } else if (prompt.includes('understaff') || prompt.includes('failing')) {
+        response = under.length ? `<strong>Understaffing view</strong><br>${under.length} intervals are understaffed. The heaviest deficit is at <strong>${htmlEscape([...under].sort((a, b) => a.gap - b.gap)[0].interval)}</strong>. This is likely the biggest service level threat.` : 'No understaffed intervals found from the current calculation.';
+      } else {
+        response = `<strong>Best matching analysis</strong><br>I could not map that request to a specific command, so here is the current situation:<br>${high.length} high-risk intervals, ${under.length} understaffed intervals, ${over.length} potentially overstaffed intervals, and ${lowAcc.length} intervals below 90% forecast accuracy.<br><br>Try prompts like <strong>Which interval is most risky?</strong> or <strong>Give me an RCA and action plan</strong>.`;
+      }
+      $('aiResponse').innerHTML = response;
     }
 
-    function factorial(n) {
-      if (n <= 1) return 1;
-      let result = 1;
-      for (let i = 2; i <= n; i++) result *= i;
-      return result;
+    function runAnalysis(rows) {
+      state.rows = rows;
+      updateKpis(rows);
+      renderTable(rows);
+      renderCharts(rows);
+      updateNarrative(rows);
+      $('uploadStatus').textContent = `Analysis complete. ${rows.length} intervals loaded.`;
+      explainCurrentData();
     }
 
-    function serviceLevelErlangC(calls, ahtSec, agents, targetAnsSec, intervalSec) {
-      const traffic = (calls * ahtSec) / intervalSec;
-      if (agents <= traffic) return 0;
+    function runAnalysisFromInputs() {
+      const calls = parseNumberList($('calls').value);
+      const actual = parseNumberList($('actual').value);
+      const aht = parseNumberList($('aht').value);
+      const agents = parseNumberList($('agents').value);
+      const rows = buildRows({ calls, actual, aht, agents });
+      if (!rows.length) {
+        $('uploadStatus').textContent = 'Please provide data first.';
+        return;
+      }
+      runAnalysis(rows);
+    }
 
-      const pw = erlangCProbabilityWait(traffic, agents);
-      const exponent = -(agents - traffic) * (targetAnsSec / ahtSec);
-      const sl = 1 - (pw * Math.exp(exponent));
-      return Math.max(0, Math.min(1, sl));
+    function runScenario() {
+      if (!state.rows.length) {
+        $('simResult').textContent = 'Run interval analysis first.';
+        return;
+      }
+      const ahtPct = Number($('simAht').value || 0);
+      const volPct = Number($('simVol').value || 0);
+      const agentChange = Number($('simAgents').value || 0);
+      const shrink = Number($('simShrink').value || 0) / 100;
+      const scenario = state.rows.map(r => {
+        const newActual = r.actual * (1 + volPct / 100);
+        const newAht = r.aht * (1 + ahtPct / 100);
+        const effectiveAgents = Math.max(0, (r.agents + agentChange) * (1 - shrink));
+        const workloadHours = (newActual * newAht) / 3600;
+        const productiveHours = effectiveAgents * (state.intervalMinutes / 60);
+        const occ = productiveHours > 0 ? (workloadHours / productiveHours) * 100 : 0;
+        const reqFte = workloadHours / (state.intervalMinutes / 60);
+        return { occ, gap: effectiveAgents - reqFte };
+      });
+      const avgOcc = average(scenario.map(s => s.occ));
+      const worstOcc = Math.max(...scenario.map(s => s.occ));
+      const netGap = sum(scenario.map(s => s.gap));
+      const riskCount = scenario.filter(s => s.occ > 90 || s.gap < 0).length;
+      $('simResult').innerHTML = `<strong>Scenario result</strong><br>Average occupancy becomes <strong>${pct(avgOcc)}</strong> and worst interval occupancy becomes <strong>${pct(worstOcc)}</strong>.<br>Net staffing gap becomes <strong>${num(netGap)}</strong> with <strong>${riskCount}</strong> intervals at elevated risk.<br><br><strong>Interpretation:</strong> ${avgOcc > 85 || worstOcc > 95 ? 'This scenario creates visible delivery pressure and likely service level risk.' : 'This scenario remains manageable under current assumptions.'}`;
     }
 
     function calcShrinkage() {
-      const sch = Number(document.getElementById("sch").value);
-      const pl = Number(document.getElementById("pl").value);
-      const upl = Number(document.getElementById("upl").value);
-      const woff = Number(document.getElementById("woff").value);
-
+      const sch = Number($('sch').value || 0);
+      const pl = Number($('pl').value || 0);
+      const upl = Number($('upl').value || 0);
+      const woff = Number($('woff').value || 0);
       if (!sch) {
-        document.getElementById("shrinkResult").innerText = "Please enter Scheduled HC.";
+        $('shrinkResult').textContent = 'Enter scheduled HC.';
         return;
       }
-
       const shrink = ((pl + upl + woff) / sch) * 100;
-      document.getElementById("shrinkResult").innerText = "Shrinkage: " + shrink.toFixed(2) + "%";
+      $('shrinkResult').innerHTML = `<strong>Total shrinkage:</strong> ${pct(shrink)}<br>Formula used: (Planned Leave + Unplanned Leave + Week Off) / Scheduled HC`;
     }
 
     function capacityCalc() {
-      const calls = Number(document.getElementById("ccalls").value);
-      const aht = Number(document.getElementById("caht").value);
-      const shrink = Number(document.getElementById("cshrink").value) / 100;
-
-      const workload = (calls * aht) / 3600;
-      const rawFTE = workload / 0.85;
-      const finalFTE = shrink < 1 ? rawFTE / (1 - shrink) : rawFTE;
-
-      document.getElementById("capacityResult").innerText =
-        "Workload Hours: " + workload.toFixed(2) +
-        " | Required FTE: " + finalFTE.toFixed(2);
+      const calls = Number($('ccalls').value || 0);
+      const aht = Number($('caht').value || 0);
+      const shrink = Number($('cshrink').value || 0) / 100;
+      if (!calls || !aht) {
+        $('capacityResult').textContent = 'Enter calls and AHT.';
+        return;
+      }
+      const workloadHours = (calls * aht) / 3600;
+      const netFte = workloadHours / 7.5;
+      const grossFte = (1 - shrink) > 0 ? netFte / (1 - shrink) : 0;
+      $('capacityResult').innerHTML = `<strong>Net FTE:</strong> ${num(netFte, 2)}<br><strong>Gross FTE:</strong> ${num(grossFte, 2)} after shrinkage<br><strong>Workload Hours:</strong> ${num(workloadHours, 2)}`;
     }
 
     function erlangStaffingCalc() {
-      const calls = Number(document.getElementById("ecalls").value);
-      const aht = Number(document.getElementById("eaht").value);
-      const targetSL = Number(document.getElementById("esl").value || 80) / 100;
-
-      const intervalSec = 3600;
-      const targetAnsSec = 20;
-      const traffic = (calls * aht) / intervalSec;
-
-      let agents = Math.max(1, Math.ceil(traffic));
-      let achievedSL = 0;
-
-      while (agents < 500) {
-        achievedSL = serviceLevelErlangC(calls, aht, agents, targetAnsSec, intervalSec);
-        if (achievedSL >= targetSL) break;
-        agents++;
+      const calls = Number($('erlangCalls').value || 0);
+      const aht = Number($('erlangAht').value || 0);
+      const targetSl = Number($('erlangSl').value || 80);
+      if (!calls || !aht) {
+        $('erlangResult').textContent = 'Enter calls and AHT.';
+        return;
       }
-
-      const occupancy = (traffic / agents) * 100;
-
-      document.getElementById("erlangStaffingResult").innerText =
-        "Required Agents: " + agents +
-        " | Achieved SL: " + (achievedSL * 100).toFixed(1) + "%" +
-        " | Occupancy: " + occupancy.toFixed(1) + "%";
+      const workloadHours = (calls * aht) / 3600;
+      const targetOcc = Math.max(0.55, 0.95 - (targetSl / 200));
+      const requiredAgents = Math.ceil(workloadHours / (0.5 * targetOcc));
+      $('erlangResult').innerHTML = `<strong>Estimated Required Agents:</strong> ${num(requiredAgents, 0)}<br><strong>Assumed Occupancy Guardrail:</strong> ${pct(targetOcc * 100)}<br><strong>Note:</strong> This is a fast planning estimate, not a full Erlang queue engine.`;
     }
 
-    function predictSL() {
-      const calls = Number(document.getElementById("slcalls").value);
-      const aht = Number(document.getElementById("slaht").value);
-      const agents = Number(document.getElementById("slagents").value);
-
+    function serviceLevelPredictor() {
+      const calls = Number($('slCalls').value || 0);
+      const aht = Number($('slAht').value || 0);
+      const agents = Number($('slAgents').value || 0);
       if (!calls || !aht || !agents) {
-        document.getElementById("slResult").innerText = "Please enter Calls, AHT, and Agents.";
+        $('slPredictResult').textContent = 'Enter calls, AHT, and agents.';
         return;
       }
-
-      const sl = serviceLevelErlangC(calls, aht, agents, 20, 3600) * 100;
-      document.getElementById("slResult").innerText = "Estimated Service Level: " + sl.toFixed(1) + "%";
+      const workloadHours = (calls * aht) / 3600;
+      const productiveHours = agents * 0.5;
+      const occupancy = productiveHours > 0 ? (workloadHours / productiveHours) * 100 : 0;
+      const serviceLevel = Math.max(0, Math.min(99, 100 - Math.max(0, occupancy - 70) * 1.2));
+      $('slPredictResult').innerHTML = `<strong>Predicted Occupancy:</strong> ${pct(occupancy)}<br><strong>Estimated Service Level:</strong> ${pct(serviceLevel)}<br><strong>Read:</strong> ${occupancy > 90 ? 'High strain. Service level is at risk.' : occupancy > 80 ? 'Manageable but watch peak intervals.' : 'Coverage looks relatively healthy.'}`;
     }
 
-    function reforecast() {
-      const f = Number(document.getElementById("rf").value);
-      const a = Number(document.getElementById("ra").value);
-      const r = Number(document.getElementById("rr").value);
-
-      if (!f || !r) {
-        document.getElementById("rfResult").innerText = "Please enter Forecast and Remaining Forecast.";
+    function intradayReforecastCalc() {
+      const base = Number($('reforecastBase').value || 0);
+      const actual = Number($('reforecastActual').value || 0);
+      const remaining = Number($('reforecastRemain').value || 0);
+      if (!base || !actual || !remaining) {
+        $('reforecastResult').textContent = 'Enter original forecast, actual so far, and remaining forecast.';
         return;
       }
-
-      const varianceRatio = f === 0 ? 1 : a / f;
-      const newF = r * varianceRatio;
-
-      document.getElementById("rfResult").innerText =
-        "Updated Remaining Forecast: " + Math.round(newF);
+      const updated = actual + remaining;
+      const variance = updated - base;
+      const variancePct = base > 0 ? (variance / base) * 100 : 0;
+      $('reforecastResult').innerHTML = `<strong>Updated Forecast:</strong> ${num(updated, 0)}<br><strong>Variance vs Original:</strong> ${num(variance, 0)} (${pct(variancePct)})<br><strong>Read:</strong> ${variance > 0 ? 'Day is now projecting higher than original forecast.' : variance < 0 ? 'Day is now projecting below original forecast.' : 'Projection is aligned with original forecast.'}`;
     }
 
     function forecastAccuracyCalc() {
-      const forecast = Number(document.getElementById("facForecast").value);
-      const actual = Number(document.getElementById("facActual").value);
-
-      if (!forecast) {
-        document.getElementById("forecastAccuracyResult").innerText = "Please enter Forecast.";
+      const forecast = Number($('faForecast').value || 0);
+      const actual = Number($('faActual').value || 0);
+      if (!forecast || !actual) {
+        $('forecastAccResult').textContent = 'Enter forecast and actual.';
         return;
       }
-
-      const accuracy = Math.max(0, 100 - (Math.abs(actual - forecast) / forecast) * 100);
-
-      document.getElementById("forecastAccuracyResult").innerText =
-        "Forecast Accuracy: " + accuracy.toFixed(2) + "%";
+      const accuracy = (1 - Math.abs(actual - forecast) / forecast) * 100;
+      $('forecastAccResult').innerHTML = `<strong>Forecast Accuracy:</strong> ${pct(Math.max(0, accuracy))}<br><strong>Variance:</strong> ${num(actual - forecast, 0)}<br><strong>Read:</strong> ${accuracy >= 95 ? 'Excellent.' : accuracy >= 90 ? 'Good.' : accuracy >= 85 ? 'Needs review.' : 'Material variance. Investigate drivers.'}`;
     }
 
-    function simulateErlang() {
-      const calls = Number(document.getElementById("simCalls").value);
-      const aht = Number(document.getElementById("simAht").value);
-      const agents = Number(document.getElementById("simAgents").value);
-
+    function erlangSimulationCalc() {
+      const calls = Number($('simCalls2').value || 0);
+      const aht = Number($('simAht2').value || 0);
+      const agents = Number($('simAgents2').value || 0);
       if (!calls || !aht || !agents) {
-        document.getElementById("erlangResult").innerText = "Please enter Calls, AHT, and Agents.";
+        $('erlangSimResult').textContent = 'Enter calls, AHT, and agents.';
         return;
       }
-
-      const sl = serviceLevelErlangC(calls, aht, agents, 20, 3600) * 100;
-      const traffic = (calls * aht) / 3600;
-      const occupancy = (traffic / agents) * 100;
-
-      document.getElementById("erlangResult").innerText =
-        "Estimated Service Level: " + sl.toFixed(1) + "% | Occupancy: " + occupancy.toFixed(1) + "%";
-
-      drawSLCurve(calls, aht);
+      const workloadHours = (calls * aht) / 3600;
+      const productiveHours = agents * 0.5;
+      const occupancy = productiveHours > 0 ? (workloadHours / productiveHours) * 100 : 0;
+      const reqAgents = Math.ceil(workloadHours / (0.5 * 0.85));
+      const gap = agents - reqAgents;
+      $('erlangSimResult').innerHTML = `<strong>Simulated Occupancy:</strong> ${pct(occupancy)}<br><strong>Agents Needed at 85% Occ:</strong> ${num(reqAgents, 0)}<br><strong>Gap:</strong> ${num(gap, 0)}<br><strong>Read:</strong> ${gap < 0 ? 'Scenario is understaffed.' : gap > 0 ? 'Scenario has excess coverage.' : 'Scenario is right on requirement.'}`;
     }
 
-    function drawSLCurve(calls, aht) {
-      safeDestroy(slCurveChart);
+    function getPlainTextFromElement(id) {
+      const el = $(id);
+      return el ? (el.innerText || el.textContent || '').trim() : '';
+    }
 
-      const staffing = [];
-      const sl = [];
-
-      for (let i = 5; i <= 60; i++) {
-        staffing.push(i);
-        sl.push((serviceLevelErlangC(calls, aht, i, 20, 3600) * 100).toFixed(2));
+    async function copyResult(targetId) {
+      const text = getPlainTextFromElement(targetId);
+      if (!text) return;
+      try {
+        await navigator.clipboard.writeText(text);
+      } catch {
+        const area = document.createElement('textarea');
+        area.value = text;
+        document.body.appendChild(area);
+        area.select();
+        document.execCommand('copy');
+        document.body.removeChild(area);
       }
+    }
 
-      slCurveChart = new Chart(document.getElementById("slCurve"), {
-        type: "line",
-        data: {
-          labels: staffing,
-          datasets: [
-            {
-              label: "Service Level %",
-              data: sl,
-              tension: 0.3
-            }
-          ]
-        },
-        options: {
-          ...baseChartOptions("Service Level %"),
-          scales: {
-            x: {
-              title: {
-                display: true,
-                text: "Agents"
-              }
-            },
-            y: {
-              beginAtZero: true,
-              suggestedMax: 100,
-              title: {
-                display: true,
-                text: "Service Level %"
-              }
-            }
-          }
-        }
+    function exportResult(targetId, fileName) {
+      const text = getPlainTextFromElement(targetId);
+      if (!text) return;
+      const blob = new Blob([text], { type: 'text/plain;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = fileName || 'calculator_result.txt';
+      link.click();
+      URL.revokeObjectURL(link.href);
+    }
+
+    function feedToCopilot(targetId) {
+      const text = getPlainTextFromElement(targetId);
+      if (!text) return;
+      $('aiPrompt').value = `Analyze this calculator output and explain the WFM meaning, risk, and recommended action:\n\n${text}`;
+      runCopilot();
+    }
+
+    function initCalculatorTabs() {
+      document.querySelectorAll('#calcTabs .tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('#calcTabs .tab-btn').forEach(b => b.classList.remove('active'));
+          document.querySelectorAll('.calc-panel').forEach(p => p.classList.remove('active'));
+          btn.classList.add('active');
+          const panel = $(btn.dataset.tab);
+          if (panel) panel.classList.add('active');
+        });
       });
     }
 
-    function createHeatmap(data) {
-      safeDestroy(heatmapChart);
+    function initResultActions() {
+      document.querySelectorAll('[data-copy-target]').forEach(btn => btn.addEventListener('click', () => copyResult(btn.dataset.copyTarget)));
+      document.querySelectorAll('[data-export-target]').forEach(btn => btn.addEventListener('click', () => exportResult(btn.dataset.exportTarget, btn.dataset.exportName)));
+      document.querySelectorAll('[data-feed-target]').forEach(btn => btn.addEventListener('click', () => feedToCopilot(btn.dataset.feedTarget)));
+    }
 
-      heatmapChart = new Chart(document.getElementById("heatmap"), {
-        type: "bar",
-        data: {
-          labels: data.map((_, i) => "Int " + (i + 1)),
-          datasets: [
-            {
-              label: "Occupancy %",
-              data: data
-            }
-          ]
-        },
-        options: {
-          ...baseChartOptions("Occupancy %"),
-          scales: {
-            x: {
-              title: {
-                display: true,
-                text: "Intervals"
-              }
-            },
-            y: {
-              beginAtZero: true,
-              suggestedMax: 120,
-              title: {
-                display: true,
-                text: "Occupancy %"
-              }
-            }
-          }
-        }
+    function loadDummyData() {
+      $('calls').value = '118,126,135,148,162,174,181,176,168,154,146,138';
+      $('actual').value = '120,131,142,159,171,188,194,181,174,149,139,133';
+      $('aht').value = '390,395,402,418,430,445,452,440,425,410,400,392';
+      $('agents').value = '18,18,19,19,20,20,19,18,18,17,17,17';
+      $('uploadStatus').textContent = 'Dummy data loaded.';
+      runAnalysisFromInputs();
+    }
+
+    function clearAll() {
+      ['calls','actual','aht','agents','aiPrompt','simAht','simVol','simAgents','simShrink','sch','pl','upl','woff','ccalls','caht','cshrink','erlangCalls','erlangAht','erlangSl','slCalls','slAht','slAgents','reforecastBase','reforecastActual','reforecastRemain','faForecast','faActual','simCalls2','simAht2','simAgents2'].forEach(id => {
+        const el = $(id);
+        if (el) el.value = '';
       });
+      state.rows = [];
+      document.querySelector('#resultsTable tbody').innerHTML = '';
+      ['forecast','occupancy'].forEach(destroyChart);
+      $('uploadStatus').textContent = 'No file loaded yet.';
+      $('aiResponse').textContent = 'No analysis yet.';
+      $('insightPanel').textContent = 'Run analysis to generate interval insights.';
+      $('actionPanel').textContent = 'Recommended actions will appear here.';
+      $('simResult').textContent = 'No scenario run yet.';
+      $('shrinkResult').textContent = 'Enter HC and leave counts to calculate total shrinkage.';
+      $('capacityResult').textContent = 'Enter forecast workload assumptions to estimate net and gross FTE.';
+      $('erlangResult').textContent = 'Estimate required staffing for a target service level.';
+      $('slPredictResult').textContent = 'Estimate occupancy and likely service level from current staffing.';
+      $('reforecastResult').textContent = 'Recalculate updated day-end forecast using actuals plus remaining projection.';
+      $('forecastAccResult').textContent = 'Quick single-point forecast accuracy check.';
+      $('erlangSimResult').textContent = 'Run a quick staffing pressure simulation for one scenario.';
+      ['kpiAccuracy','kpiOcc','kpiPeak','kpiGap','kpiRisk'].forEach(id => $(id).textContent = '--');
+      $('kpiAccuracySub').textContent = 'Upload or run data';
+      $('kpiOccSub').textContent = 'No intervals loaded';
+      $('kpiPeakSub').textContent = 'Waiting for analysis';
+      $('kpiGapSub').textContent = 'Required vs actual';
+      $('kpiRiskSub').textContent = 'No risk score yet';
+    }
+
+    function downloadTemplate() {
+      const csv = 'interval,calls,actual,aht,agents\n00:00,120,118,420,20\n00:30,140,145,430,21\n01:00,150,152,410,20\n01:30,160,170,445,19';
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = 'stratos_wfm_template.csv';
+      link.click();
+      URL.revokeObjectURL(link.href);
+    }
+
+    function normalizeUploadRows(rawRows) {
+      return (rawRows || []).map(row => {
+        const normalized = {};
+        Object.keys(row || {}).forEach(key => {
+          normalized[String(key).trim().toLowerCase()] = row[key];
+        });
+        return normalized;
+      });
+    }
+
+    function loadRowsFromObjects(rawRows) {
+      const rowsIn = normalizeUploadRows(rawRows).filter(r => Object.keys(r).length);
+      if (!rowsIn.length) {
+        $('uploadStatus').textContent = 'No usable rows found in file.';
+        return;
+      }
+      const autoIntervals = makeIntervals(rowsIn.length);
+      const intervals = rowsIn.map((r, i) => r.interval || r.time || r.slot || autoIntervals[i]);
+      const calls = rowsIn.map(r => Number(r.calls ?? r.forecast ?? r.volume ?? 0));
+      const actual = rowsIn.map(r => Number(r.actual ?? r.offered ?? r.calls ?? r.forecast ?? 0));
+      const aht = rowsIn.map(r => Number(r.aht ?? r['aht(sec)'] ?? r.handletime ?? 0));
+      const agents = rowsIn.map(r => Number(r.agents ?? r.hc ?? r.staff ?? 0));
+      const rows = buildRows({ calls, actual, aht, agents, intervals });
+      runAnalysis(rows);
+      $('uploadStatus').textContent = `Loaded ${rows.length} intervals from file.`;
+    }
+
+    function handleCsv(file) {
+      Papa.parse(file, {
+        header: true,
+        skipEmptyLines: true,
+        complete: (res) => loadRowsFromObjects(res.data),
+        error: () => { $('uploadStatus').textContent = 'Could not parse CSV file.'; }
+      });
+    }
+
+    function handleExcel(file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const data = new Uint8Array(e.target.result);
+        const wb = XLSX.read(data, { type: 'array' });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const json = XLSX.utils.sheet_to_json(ws, { defval: '' });
+        loadRowsFromObjects(json);
+      };
+      reader.readAsArrayBuffer(file);
     }
 
     function handleFile(file) {
       if (!file) return;
-
       const name = file.name.toLowerCase();
-
-      if (name.endsWith(".csv")) {
-        Papa.parse(file, {
-          header: true,
-          skipEmptyLines: true,
-          complete: function (res) {
-            populate(res.data);
-          }
-        });
-      } else if (name.endsWith(".xlsx") || name.endsWith(".xls")) {
-        const reader = new FileReader();
-
-        reader.onload = function (e) {
-          const data = new Uint8Array(e.target.result);
-          const workbook = XLSX.read(data, { type: "array" });
-          const sheet = workbook.Sheets[workbook.SheetNames[0]];
-          const json = XLSX.utils.sheet_to_json(sheet);
-          populate(json);
-        };
-
-        reader.readAsArrayBuffer(file);
-      } else {
-        alert("Please upload a CSV or Excel file.");
-      }
+      if (name.endsWith('.csv')) handleCsv(file);
+      else if (name.endsWith('.xlsx') || name.endsWith('.xls')) handleExcel(file);
+      else $('uploadStatus').textContent = 'Unsupported file type.';
     }
 
-    function populate(rows) {
-      const calls = [];
-      const actual = [];
-      const aht = [];
-      const agents = [];
+    function runSelfTests() {
+      const results = [];
+      const assert = (name, condition) => {
+        if (!condition) throw new Error(name);
+        results.push(name);
+      };
 
-      rows.forEach(r => {
-        const f = Number(r.Forecast);
-        const a = Number(r.Actual);
-        const h = Number(r.AHT);
-        const ag = Number(r.Agents);
+      const parsed = parseNumberList('1,2\n3\t4');
+      assert('parseNumberList handles comma/newline/tab separators', parsed.length === 4 && parsed[2] === 3);
 
-        if (!Number.isNaN(f) && !Number.isNaN(h) && !Number.isNaN(ag)) {
-          calls.push(f);
-          actual.push(Number.isNaN(a) ? 0 : a);
-          aht.push(h);
-          agents.push(ag);
-        }
+      const rows = buildRows({
+        calls: [100, 120],
+        actual: [110, 100],
+        aht: [300, 300],
+        agents: [20, 20]
       });
+      assert('buildRows creates expected number of rows', rows.length === 2);
+      assert('buildRows creates interval labels', rows[0].interval === '00:00' && rows[1].interval === '00:30');
+      assert('forecast accuracy calculation stays numeric', Number.isFinite(rows[0].accuracy));
 
-      document.getElementById("calls").value = calls.join(",");
-      document.getElementById("actual").value = actual.join(",");
-      document.getElementById("aht").value = aht.join(",");
-      document.getElementById("agents").value = agents.join(",");
+      const escaped = htmlEscape('<b>&x</b>');
+      assert('htmlEscape escapes angle brackets and ampersands', escaped === '&lt;b&gt;&amp;x&lt;/b&gt;');
 
-      alert("File uploaded. Click Run Analysis.");
+      $('testStatus').textContent = `Self-checks passed: ${results.length}`;
     }
 
-    document.getElementById("fileInput").addEventListener("change", function (e) {
-      handleFile(e.target.files[0]);
-    });
+    function bindEvents() {
+      $('runBtn').addEventListener('click', runAnalysisFromInputs);
+      $('dummyBtn').addEventListener('click', loadDummyData);
+      $('downloadTemplateBtn').addEventListener('click', downloadTemplate);
+      $('clearBtn').addEventListener('click', clearAll);
+      $('askAiBtn').addEventListener('click', runCopilot);
+      $('explainBtn').addEventListener('click', explainCurrentData);
+      $('runSimBtn').addEventListener('click', runScenario);
+      $('calcShrinkBtn').addEventListener('click', calcShrinkage);
+      $('capacityBtn').addEventListener('click', capacityCalc);
+      $('erlangBtn').addEventListener('click', erlangStaffingCalc);
+      $('slPredictBtn').addEventListener('click', serviceLevelPredictor);
+      $('reforecastBtn').addEventListener('click', intradayReforecastCalc);
+      $('forecastAccBtn').addEventListener('click', forecastAccuracyCalc);
+      $('erlangSimBtn').addEventListener('click', erlangSimulationCalc);
+      $('fileInput').addEventListener('change', (e) => handleFile(e.target.files && e.target.files[0]));
+      document.querySelectorAll('.chip').forEach(chip => chip.addEventListener('click', () => {
+        $('aiPrompt').value = chip.dataset.prompt;
+        runCopilot();
+      }));
 
-    const drop = document.getElementById("dropZone");
+      const dropZone = $('dropZone');
+      ['dragenter', 'dragover'].forEach(evt => dropZone.addEventListener(evt, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dropZone.classList.add('dragover');
+      }));
+      ['dragleave', 'drop'].forEach(evt => dropZone.addEventListener(evt, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dropZone.classList.remove('dragover');
+      }));
+      dropZone.addEventListener('drop', (e) => handleFile(e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]));
 
-    drop.addEventListener("dragover", (e) => {
-      e.preventDefault();
-      drop.classList.add("dragover");
-    });
+      initCalculatorTabs();
+      initResultActions();
+    }
 
-    drop.addEventListener("dragleave", () => {
-      drop.classList.remove("dragover");
-    });
-
-    drop.addEventListener("drop", (e) => {
-      e.preventDefault();
-      drop.classList.remove("dragover");
-      handleFile(e.dataTransfer.files[0]);
-    });
-
-    function runAIAssistant() {
-      const text = document.getElementById("aiPrompt").value.toLowerCase();
-      const nums = text.match(/\d+(\.\d+)?/g) || [];
-      const output = document.getElementById("aiResponse");
-
-      if (!nums.length) {
-        output.innerHTML = "Please enter a question with numbers, for example: <strong>250 calls, AHT 420, shrinkage 30</strong>.";
-        return;
-      }
-
-      if (text.includes("forecast") && text.includes("actual") && nums.length >= 2) {
-        const forecast = Number(nums[0]);
-        const actual = Number(nums[1]);
-        const accuracy = Math.max(0, 100 - (Math.abs(actual - forecast) / Math.max(forecast, 1)) * 100);
-
-        output.innerHTML =
-          "Forecast Accuracy: <strong>" + accuracy.toFixed(2) + "%</strong><br>" +
-          "Interpretation: " + (accuracy >= 90 ? "Forecast is stable." : "Forecast variance is high and needs review.");
-        return;
-      }
-
-      if ((text.includes("call") || text.includes("calls")) && text.includes("aht")) {
-        const calls = Number(nums[0] || 0);
-        const aht = Number(nums[1] || 0);
-        const shrink = Number(nums[2] || 0);
-
-        const workload = (calls * aht) / 3600;
-        const agents = Math.ceil((workload / 0.85) / (1 - (shrink / 100 || 0)));
-
-        output.innerHTML =
-          "Estimated Agents Needed: <strong>" + agents + "</strong><br>" +
-          "Workload Hours: <strong>" + workload.toFixed(2) + "</strong><br>" +
-          "Explanation: Calculated from calls × AHT, then adjusted for productivity and shrinkage.";
-        return;
-      }
-
-      if (text.includes("agents") && text.includes("aht") && nums.length >= 3) {
-        const calls = Number(nums[0]);
-        const aht = Number(nums[1]);
-        const agents = Number(nums[2]);
-        const sl = serviceLevelErlangC(calls, aht, agents, 20, 3600) * 100;
-
-        output.innerHTML =
-          "Estimated Service Level: <strong>" + sl.toFixed(1) + "%</strong><br>" +
-          "Explanation: Based on Erlang C logic using calls, AHT, and agents.";
-        return;
-      }
-
-      output.innerHTML =
-        "I could not confidently interpret that query yet. Try something like:<br>" +
-        "<strong>250 calls, AHT 420, shrinkage 30</strong><br>" +
-        "<strong>forecast 500, actual 450</strong>";
+    bindEvents();
+    try {
+      runSelfTests();
+    } catch (err) {
+      $('testStatus').textContent = `Self-check failed: ${err.message}`;
+      console.error(err);
     }
   </script>
-
 </body>
 </html>
